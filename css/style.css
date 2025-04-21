@@ -1,0 +1,414 @@
+/* 기본 스타일 */
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+/* 배달의 민족 연성체 폰트 추가 (로컬 파일 사용) */
+@font-face {
+    font-family: 'BMYeonSung';
+    src: url('fonts/BMYEONSUNG_ttf.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap; /* 폰트 로딩 최적화 */
+}
+
+/* 구글 폰트 추가 - 붓글씨 스타일 */
+@import url('https://fonts.googleapis.com/css2?family=Song+Myung&family=Nanum+Brush+Script&family=Gowun+Batang:wght@400;700&display=swap');
+
+/* 헤더 스타일 */
+header {
+    background-color: #f5efe0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #e6dcc6;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.han-title {
+    font-family: 'BMYeonSung', sans-serif; /* 배달의 민족 연성체 적용 */
+    color: #5d4037;
+    font-size: 2.4rem; /* 기본 크기 증가 */
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.han-subtitle {
+    font-family: 'BMYeonSung', sans-serif;
+    color: #7d6e63;
+    font-size: 1.3rem; /* 기본 크기 증가 */
+    letter-spacing: 0.5px;
+}
+
+/* 모바일 화면에서 폰트 크기 더 크게 */
+@media (max-width: 576px) {
+    .han-title {
+        font-size: 2.7rem; /* 모바일에서 더 크게 */
+        letter-spacing: 0.5px;
+    }
+    
+    .han-subtitle {
+        font-size: 1.5rem; /* 모바일에서 더 크게 */
+        letter-spacing: 0.3px;
+    }
+}
+
+/* 태블릿 화면에서도 폰트 크기 조정 */
+@media (min-width: 577px) and (max-width: 991px) {
+    .han-title {
+        font-size: 2.6rem; /* 태블릿에서 더 크게 */
+    }
+    
+    .han-subtitle {
+        font-size: 1.4rem; /* 태블릿에서 더 크게 */
+    }
+}
+
+/* 로고 크기도 조정 */
+.hanyang-seal img {
+    width: 90px;
+    height: 90px;
+}
+
+@media (max-width: 576px) {
+    .hanyang-seal img {
+        width: 95px;
+        height: 95px;
+    }
+}
+
+/* 검색창 스타일 */
+.input-group-text {
+    border-color: #e6dcc6;
+    background-color: #f5efe0;
+    font-weight: 500;
+}
+
+#search-input {
+    border-color: #e6dcc6;
+    background-color: #ffffff;
+}
+
+#search-button {
+    background-color: #a1887f;
+    border-color: #a1887f;
+    font-weight: normal;
+    font-family: 'BMYeonSung', sans-serif;
+    font-size: 1.1rem; /* 기본 크기 증가 */
+}
+
+#search-button:hover {
+    background-color: #8d6e63;
+    border-color: #8d6e63;
+}
+
+/* 모바일에서 검색 버튼 크기 증가 */
+@media (max-width: 576px) {
+    #search-button {
+        font-size: 1.3rem; /* 모바일에서 더 크게 */
+    }
+    
+    #search-input {
+        font-size: 1.1rem; /* 검색 입력창도 크게 */
+    }
+}
+
+/* 지도 컨테이너 스타일 */
+.map-container {
+    position: relative;
+    height: calc(100vh - 80px);
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* 사이드바 스타일 */
+.sidebar {
+    background-color: #f5efe0;
+    padding: 20px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    border-right: 1px solid #e6dcc6;
+    transition: all 0.3s ease;
+}
+
+.sidebar h5 {
+    color: #5d4037;
+    font-weight: normal;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-family: 'BMYeonSung', sans-serif;
+    font-size: 1.4rem; /* 기본 크기 증가 */
+}
+
+/* 모바일에서 사이드바 제목 크기 증가 */
+@media (max-width: 767.98px) {
+    .sidebar h5 {
+        font-size: 1.7rem; /* 모바일에서 더 크게 */
+    }
+    
+    .sidebar .form-check-label {
+        font-size: 1.1rem; /* 체크박스 라벨도 크게 */
+    }
+}
+
+.sidebar .form-check-label {
+    color: #7d6e63;
+}
+
+.sidebar .form-select, 
+.sidebar .form-control {
+    background-color: #ffffff;
+    border-color: #e6dcc6;
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 80%;
+        height: 100%;
+        z-index: 1050;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        transition: left 0.3s ease;
+        background-color: #f5efe0;
+    }
+    
+    .sidebar.show {
+        left: 0;
+    }
+    
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+        display: none;
+    }
+    
+    .sidebar-backdrop.show {
+        display: block;
+    }
+}
+
+/* 필터 스타일 */
+.category-filters, .rating-filters, .location-filters {
+    margin-left: 10px;
+}
+
+/* 레스토랑 정보 카드 스타일 */
+.restaurant-info-card {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 350px;
+    max-width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 900;
+    transition: all 0.3s ease;
+}
+
+.restaurant-info-card .card-header h5 {
+    font-family: 'BMYeonSung', sans-serif; /* 배달의 민족 연성체 적용 */
+    color: #5d4037;
+    font-size: 1.4rem;
+}
+
+.restaurant-image img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.restaurant-details i {
+    width: 20px;
+    text-align: center;
+}
+
+/* 애니메이션 */
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 리뷰 스타일 */
+.rating-stars i {
+    cursor: pointer;
+    font-size: 1.5rem;
+    margin-right: 5px;
+    color: #ced4da;
+}
+
+.rating-stars i.fas {
+    color: #ffc107;
+}
+
+.review-card {
+    border-left: 3px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.review-card:hover {
+    border-left-color: #a1887f;
+}
+
+/* 레스토랑 목록 스타일 */
+.restaurant-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.restaurant-items {
+    max-height: 100%;
+}
+
+/* 장소 정보창 스타일 */
+.place-info-window {
+    padding: 5px;
+    max-width: 300px;
+}
+
+.place-info-window h5 {
+    margin-bottom: 8px;
+    font-family: 'BMYeonSung', sans-serif; /* 배달의 민족 연성체 적용 */
+    font-size: 1.3rem;
+    color: #5d4037;
+}
+
+.place-info-window p {
+    margin-bottom: 5px;
+}
+
+/* Google Places 검색 결과 항목 스타일 */
+.google-place-item {
+    border-left: 3px solid #e9ecef;
+}
+
+.google-place-item:hover {
+    border-left-color: #a1887f;
+}
+
+/* 지도 스타일 수정 */
+.gm-style .gm-style-iw-c {
+    padding: 12px !important;
+}
+
+.gm-style .gm-style-iw-d {
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+/* 모바일용 하단 시트(Bottom Sheet) 스타일 */
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transform: translateY(95%);
+    transition: transform 0.3s ease;
+    max-height: 75vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.bottom-sheet.open {
+    transform: translateY(0);
+}
+
+.bottom-sheet.peek {
+    transform: translateY(70%);
+}
+
+.bottom-sheet-header {
+    padding: 10px 20px;
+    border-bottom: 1px solid #e6dcc6;
+    text-align: center;
+    position: relative;
+    font-family: 'BMYeonSung', sans-serif; /* 배달의 민족 연성체 적용 */
+    font-size: 1.3rem;
+}
+
+.handle {
+    width: 40px;
+    height: 5px;
+    background-color: #d7ccc8;
+    border-radius: 3px;
+    margin: 0 auto 10px;
+}
+
+.bottom-sheet-content {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.mobile-restaurant-list {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* 모바일용 하단 내비게이션 */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 900;
+}
+
+.mobile-bottom-nav .btn {
+    border-radius: 30px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 맛집 등록 버튼 */
+.add-restaurant-btn {
+    top: 20px;
+    left: 20px;
+    z-index: 900;
+}
+
+@media (max-width: 767.98px) {
+    .add-restaurant-btn {
+        top: 10px;
+        left: 10px;
+    }
+}
+
+/* 모달 타이틀에도 폰트 적용 */
+.modal-title {
+    font-family: 'BMYeonSung', sans-serif;
+    font-size: 1.4rem;
+    color: #5d4037;
+} 

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화란여지도 - 네덜란드 한인 맛집 공유 플랫폼</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 헤더 영역 -->
+    <header class="py-3">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4 d-flex align-items-center">
+                    <!-- 햄버거 버튼 추가 -->
+                    <button class="btn me-2 d-md-none" id="sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="logo-container d-flex align-items-center">
+                        <div class="hanyang-seal me-3">
+                            <!-- 로고 이미지 추가 -->
+                            <img src="images/logo.png" alt="화란여지도 로고" width="80" height="80" style="object-fit: contain;">
+                        </div>
+                        <div>
+                            <h1 class="fs-3 mb-0 han-title">화란여지도</h1>
+                            <p class="mb-0 small han-subtitle">숨겨진 맛집을 찾아서...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="search-input" placeholder="맛집 이름, 메뉴 검색...">
+                        <button class="btn btn-primary" id="search-button">검색하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- 필터 사이드바 -->
+            <div class="col-md-3 col-lg-2 sidebar" id="sidebar">
+                <div class="p-2 mb-4 d-flex justify-content-between align-items-center d-md-none">
+                    <h5 class="mb-0">필터</h5>
+                    <button class="btn btn-sm btn-outline-secondary close-sidebar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <h5><i class="fas fa-utensils me-2"></i>카테고리</h5>
+                <div class="category-filters mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="한식" id="category-korean">
+                        <label class="form-check-label" for="category-korean">
+                            <i class="fas fa-circle me-1" style="color: #e74c3c; font-size: 0.7rem;"></i>
+                            한식
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="일식" id="category-japanese">
+                        <label class="form-check-label" for="category-japanese">
+                            <i class="fas fa-circle me-1" style="color: #3498db; font-size: 0.7rem;"></i>
+                            일식
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="중식" id="category-chinese">
+                        <label class="form-check-label" for="category-chinese">
+                            <i class="fas fa-circle me-1" style="color: #f39c12; font-size: 0.7rem;"></i>
+                            중식
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="양식" id="category-western">
+                        <label class="form-check-label" for="category-western">
+                            <i class="fas fa-circle me-1" style="color: #2ecc71; font-size: 0.7rem;"></i>
+                            양식
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="카페" id="category-cafe">
+                        <label class="form-check-label" for="category-cafe">
+                            <i class="fas fa-circle me-1" style="color: #9b59b6; font-size: 0.7rem;"></i>
+                            카페
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="기타" id="category-other">
+                        <label class="form-check-label" for="category-other">
+                            <i class="fas fa-circle me-1" style="color: #95a5a6; font-size: 0.7rem;"></i>
+                            기타
+                        </label>
+                    </div>
+                </div>
+
+                <h5><i class="fas fa-map-marker-alt me-2"></i>지역</h5>
+                <div class="location-filters mb-4">
+                    <select class="form-select mb-2" id="city-select">
+                        <option selected>도시 선택</option>
+                        <option value="amsterdam">암스테르담</option>
+                        <option value="rotterdam">로테르담</option>
+                        <option value="hague">헤이그</option>
+                        <option value="utrecht">위트레흐트</option>
+                        <option value="eindhoven">아인트호벤</option>
+                        <option value="other">기타</option>
+                    </select>
+                </div>
+                
+                <!-- 식당 리스트 추가 -->
+                <h5><i class="fas fa-list-alt me-2"></i>식당 목록</h5>
+                <div class="restaurant-list mb-4">
+                    <div class="list-group restaurant-items">
+                        <!-- 여기에 식당 목록이 동적으로 추가됩니다 -->
+                        <div class="text-center p-3 text-muted small" id="no-restaurants-message">
+                            필터링된 식당이 없습니다
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 지도 영역 -->
+            <div class="col-md-9 col-lg-10 map-container">
+                <div id="map"></div>
+                
+                <!-- 선택된 레스토랑 정보 카드 -->
+                <div class="restaurant-info-card d-none" id="restaurant-card">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="restaurant-name mb-0">레스토랑 이름</h5>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="restaurant-rating">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-star"></i> <span class="rating-value">4.5</span>
+                                    </span>
+                                </div>
+                                <button type="button" class="btn-close" id="close-restaurant-card"></button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="restaurant-image mb-3">
+                                <!-- 레스토랑 이미지가 여기에 동적으로 추가됨 -->
+                            </div>
+                            
+                            <p class="restaurant-category badge bg-primary mb-2">카테고리</p>
+                            
+                            <div class="restaurant-details mb-3">
+                                <p class="restaurant-address mb-2"><i class="fas fa-map-marker-alt me-1"></i> <span>주소</span></p>
+                                <a href="#" class="btn btn-sm btn-outline-primary maps-link mb-2" target="_blank">
+                                    <i class="fas fa-map me-1"></i> Google Maps에서 보기
+                                </a>
+                            </div>
+                            
+                            <!-- 리뷰 섹션 추가 -->
+                            <div class="reviews-section mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="section-title mb-0"><i class="fas fa-comment-alt me-2"></i>리뷰</h6>
+                                    <button class="btn btn-sm btn-outline-primary" id="write-review-btn">
+                                        <i class="fas fa-pen me-1"></i> 리뷰 작성
+                                    </button>
+                                </div>
+                                <div id="reviews-container">
+                                    <!-- 리뷰들이 여기에 동적으로 추가됨 -->
+                                    <p class="text-muted text-center py-3" id="no-reviews-message">아직 리뷰가 없습니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 리뷰 작성 모달 -->
+                <div class="modal fade" id="review-modal" tabindex="-1" aria-labelledby="review-modal-label" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="review-modal-label">리뷰 작성</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="review-form">
+                                    <input type="hidden" id="review-restaurant-id">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">평점</label>
+                                        <div class="rating-stars mb-3">
+                                            <i class="far fa-star" data-rating="1"></i>
+                                            <i class="far fa-star" data-rating="2"></i>
+                                            <i class="far fa-star" data-rating="3"></i>
+                                            <i class="far fa-star" data-rating="4"></i>
+                                            <i class="far fa-star" data-rating="5"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="review-text" class="form-label">한줄평</label>
+                                        <textarea class="form-control" id="review-text" rows="3" required></textarea>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="review-menu" class="form-label">추천 메뉴 (선택사항)</label>
+                                                <input type="text" class="form-control" id="review-menu">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="review-price" class="form-label">가격 (선택사항, €)</label>
+                                                <input type="number" class="form-control" id="review-price" min="0" step="0.01">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="review-image" class="form-label">사진 첨부 (선택사항)</label>
+                                        <input class="form-control" type="file" id="review-image" accept="image/*">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                                <button type="button" class="btn btn-primary" id="submit-review-btn">
+                                    <i class="fas fa-paper-plane me-1"></i> 리뷰 등록
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 맛집 등록 모달 -->
+    <div class="modal fade" id="add-restaurant-modal" tabindex="-1" aria-labelledby="add-restaurant-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="add-restaurant-modal-label">맛집 등록하기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="restaurant-form">
+                        <div class="selected-restaurant mb-3">
+                            <label class="form-label">선택된 레스토랑</label>
+                            <div class="card">
+                                <div class="card-body" id="selected-restaurant-info">
+                                    <!-- 선택된 레스토랑 정보가 여기에 표시됩니다 -->
+                                </div>
+                            </div>
+                            <input type="hidden" id="restaurant-place-id">
+                            <input type="hidden" id="restaurant-name">
+                            <input type="hidden" id="restaurant-lat">
+                            <input type="hidden" id="restaurant-lng">
+                            <input type="hidden" id="restaurant-address">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">카테고리 *</label>
+                                    <select class="form-select" id="restaurant-category" required>
+                                        <option value="">카테고리 선택</option>
+                                        <option value="한식">한식</option>
+                                        <option value="일식">일식</option>
+                                        <option value="중식">중식</option>
+                                        <option value="양식">양식</option>
+                                        <option value="카페">카페</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">도시 *</label>
+                                    <select class="form-select" id="restaurant-city" required>
+                                        <option value="">도시 선택</option>
+                                        <option value="amsterdam">암스테르담</option>
+                                        <option value="rotterdam">로테르담</option>
+                                        <option value="hague">헤이그</option>
+                                        <option value="utrecht">위트레흐트</option>
+                                        <option value="eindhoven">아인트호벤</option>
+                                        <option value="other">기타</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i> 선택한 장소의 카테고리와 도시를 설정하여 맛집으로 등록하세요.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="submitNewRestaurant()">
+                        <i class="fas fa-plus-circle me-1"></i> 등록하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Google Maps API -->
+    <script>
+        function googleMapsError() {
+            console.error('Google Maps API를 로드하는 데 실패했습니다.');
+            alert('지도를 로드하는 데 문제가 발생했습니다. 인터넷 연결을 확인하고 페이지를 새로고침해 주세요.');
+        }
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDDpw1fYal-ncOMQP6S4pizvGAgzzYxyqg&libraries=places,geometry&callback=initMap"
+        onerror="googleMapsError()">
+    </script>
+    
+    <!-- 자바스크립트 파일 -->
+    <script src="js/app.js"></script>
+</body>
+</html> 
