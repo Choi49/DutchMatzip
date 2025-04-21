@@ -22,11 +22,18 @@ header {
     background-color: #f5efe0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     border-bottom: 1px solid #e6dcc6;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
 }
 
 .logo-container {
     display: flex;
     align-items: center;
+}
+
+.title-container {
+    white-space: nowrap; /* 타이틀이 한 줄로 표시되도록 */
+    overflow: hidden;    /* 넘치는 부분 숨김 */
 }
 
 .han-title {
@@ -35,6 +42,7 @@ header {
     font-size: 2.4rem; /* 기본 크기 증가 */
     letter-spacing: 1px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
 }
 
 .han-subtitle {
@@ -42,6 +50,12 @@ header {
     color: #7d6e63;
     font-size: 1.3rem; /* 기본 크기 증가 */
     letter-spacing: 0.5px;
+}
+
+.mobile-subtitle {
+    font-family: 'BMYeonSung', sans-serif;
+    color: #7d6e63;
+    font-size: 1rem;
 }
 
 /* 모바일 화면에서 폰트 크기 더 크게 */
@@ -70,14 +84,15 @@ header {
 
 /* 로고 크기도 조정 */
 .hanyang-seal img {
-    width: 90px;
-    height: 90px;
+    width: 60px;
+    height: 60px;
+    margin-right: 0.5rem;
 }
 
 @media (max-width: 576px) {
     .hanyang-seal img {
-        width: 95px;
-        height: 95px;
+        width: 65px;
+        height: 65px;
     }
 }
 
@@ -411,4 +426,129 @@ header {
     font-family: 'BMYeonSung', sans-serif;
     font-size: 1.4rem;
     color: #5d4037;
+}
+
+/* 로그인/회원가입 버튼 컨테이너 스타일 */
+.auth-buttons-container {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 로그인/회원가입 버튼 스타일 */
+.auth-buttons .btn {
+    font-family: 'BMYeonSung', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.auth-buttons .btn i {
+    font-size: 0.8rem;
+}
+
+.auth-buttons .btn-outline-secondary {
+    border-color: #a1887f;
+    color: #a1887f;
+    border-right: none; /* 오른쪽 테두리 제거해서 버튼을 붙임 */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.auth-buttons .btn-outline-secondary:hover {
+    background-color: #a1887f;
+    color: white;
+}
+
+.auth-buttons .btn-secondary {
+    background-color: #a1887f;
+    border-color: #a1887f;
+    border-left: 1px solid #8d6e63; /* 왼쪽에 구분선 추가 */
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.auth-buttons .btn-secondary:hover {
+    background-color: #8d6e63;
+    border-color: #8d6e63;
+}
+
+/* 모바일 화면에서 로그인/회원가입 버튼 스타일 */
+@media (max-width: 767.98px) {
+    .auth-buttons .btn {
+        font-size: 0.8rem; /* 0.75rem에서 0.8rem으로 증가 */
+        padding: 0.2rem 0.35rem; /* 패딩 약간 증가 */
+    }
+    
+    /* 모바일에서 로고 크기 조정 */
+    .logo-container .han-title {
+        font-size: 1.8rem;
+    }
+    
+    .logo-container .han-subtitle {
+        font-size: 1rem;
+    }
+    
+    .hanyang-seal img {
+        width: 45px; /* 40px에서 45px로 증가 */
+        height: 45px; /* 40px에서 45px로 증가 */
+        margin-right: 0.3rem;
+    }
+}
+
+/* 아주 작은 화면에서는 버튼을 더 작게 */
+@media (max-width: 400px) {
+    .han-title {
+        font-size: 1.9rem; /* 작은 화면에서도 크게 */
+        letter-spacing: 0.2px;
+    }
+    
+    .mobile-subtitle {
+        font-size: 1.1rem; /* 작은 화면에서도 크게 */
+    }
+    
+    .hanyang-seal img {
+        width: 40px; 
+        height: 40px;
+    }
+    
+    /* 버튼 크기 약간 축소 */
+    .auth-buttons .btn {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.25rem;
+    }
+}
+
+/* 아주 작은 화면에서 더 작게 */
+@media (max-width: 340px) {
+    .han-title {
+        font-size: 1.7rem;
+    }
+    
+    .mobile-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .hanyang-seal img {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .auth-buttons .btn {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.2rem;
+    }
+}
+
+/* 개인정보 안내 알림 스타일 */
+.alert-info {
+    background-color: #e6f3f8;
+    border-color: #b8e0ed;
+    color: #2d7598;
+}
+
+.alert-info i {
+    color: #2d7598;
+}
+
+.alert-info strong {
+    font-weight: 600;
 } 

@@ -12,26 +12,42 @@
 </head>
 <body>
     <!-- 헤더 영역 -->
-    <header class="py-3">
+    <header class="py-2">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-md-4 d-flex align-items-center">
+                <!-- 로고 영역 -->
+                <div class="col-6 col-md-3 d-flex align-items-center">
                     <!-- 햄버거 버튼 추가 -->
                     <button class="btn me-2 d-md-none" id="sidebar-toggle">
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="logo-container d-flex align-items-center">
-                        <div class="hanyang-seal me-3">
+                        <div class="hanyang-seal me-1 me-md-2">
                             <!-- 로고 이미지 추가 -->
-                            <img src="images/logo.png" alt="화란여지도 로고" width="80" height="80" style="object-fit: contain;">
+                            <img src="images/logo.png" alt="화란여지도 로고" width="60" height="60" style="object-fit: contain;">
                         </div>
-                        <div>
+                        <div class="title-container">
                             <h1 class="fs-3 mb-0 han-title">화란여지도</h1>
-                            <p class="mb-0 small han-subtitle">숨겨진 맛집을 찾아서...</p>
+                            <p class="mb-0 small han-subtitle d-none d-md-block">숨겨진 맛집을 찾아서...</p>
+                            <p class="mb-0 small mobile-subtitle d-md-none">맛집 공유점</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-8">
+                
+                <!-- 로그인/회원가입 버튼 영역 (모바일에서 오른쪽) -->
+                <div class="col-6 col-md-2 order-md-3 d-flex justify-content-end align-items-center">
+                    <div class="btn-group auth-buttons">
+                        <button class="btn btn-outline-secondary btn-sm" id="login-button" data-bs-toggle="modal" data-bs-target="#login-modal">
+                            <i class="fas fa-sign-in-alt me-1 d-none d-md-inline-block"></i>로그인
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="register-button" data-bs-toggle="modal" data-bs-target="#register-modal">
+                            <i class="fas fa-user-plus me-1 d-none d-md-inline-block"></i>회원가입
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 검색창 영역 (모바일에서 아래 줄로) -->
+                <div class="col-12 col-md-7 order-md-2 mt-2 mt-md-0">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0">
                             <i class="fas fa-search text-muted"></i>
@@ -303,6 +319,91 @@
                     <button type="button" class="btn btn-primary" onclick="submitNewRestaurant()">
                         <i class="fas fa-plus-circle me-1"></i> 등록하기
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div class="modal fade" id="login-modal" tabindex="-1" aria-labelledby="login-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="login-modal-label">로그인</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label for="login-userid" class="form-label">아이디</label>
+                            <input type="text" class="form-control" id="login-userid" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="login-password" class="form-label">비밀번호</label>
+                            <input type="password" class="form-control" id="login-password" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember-me">
+                            <label class="form-check-label" for="remember-me">로그인 상태 유지</label>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="submit" class="btn btn-primary">로그인</button>
+                            <a href="#" class="text-decoration-none small" id="forgot-password">비밀번호 찾기</a>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <p class="small mb-0">계정이 없으신가요? 
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#register-modal" data-bs-dismiss="modal">회원가입</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 회원가입 모달 -->
+    <div class="modal fade" id="register-modal" tabindex="-1" aria-labelledby="register-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="register-modal-label">회원가입</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 개인정보 미저장 안내 문구 추가 -->
+                    <div class="alert alert-info mb-3" role="alert">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <strong>안심하고 이용하세요!</strong> 저희는 어떠한 개인정보도 수집하지 않습니다.
+                        아이디와 닉네임만으로 서비스를 이용하실 수 있습니다.
+                    </div>
+                    
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label for="register-userid" class="form-label">아이디</label>
+                            <input type="text" class="form-control" id="register-userid" required>
+                            <div class="form-text">영문, 숫자 조합 4-12자</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-nickname" class="form-label">닉네임</label>
+                            <input type="text" class="form-control" id="register-nickname" required>
+                            <div class="form-text">다른 사용자에게 표시되는 이름입니다</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-password" class="form-label">비밀번호</label>
+                            <input type="password" class="form-control" id="register-password" required>
+                            <div class="form-text">8자 이상의 영문, 숫자, 특수문자 조합</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="register-password-confirm" class="form-label">비밀번호 확인</label>
+                            <input type="password" class="form-control" id="register-password-confirm" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">회원가입</button>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <p class="small mb-0">이미 계정이 있으신가요? 
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#login-modal" data-bs-dismiss="modal">로그인</a>
+                    </p>
                 </div>
             </div>
         </div>

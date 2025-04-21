@@ -1611,5 +1611,52 @@ function saveGooglePlace(placeId) {
     });
 }
 
+// 로그인 및 회원가입 관련 코드
+document.addEventListener('DOMContentLoaded', function() {
+    // 모달 간 전환
+    document.getElementById('show-register')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        $('#login-modal').modal('hide');
+        $('#register-modal').modal('show');
+    });
+    
+    document.getElementById('show-login')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        $('#register-modal').modal('hide');
+        $('#login-modal').modal('show');
+    });
+    
+    // 로그인 폼 제출
+    document.getElementById('login-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const userid = document.getElementById('login-userid').value;
+        const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me').checked;
+        
+        // 여기에 로그인 처리 로직 추가
+        console.log('로그인 시도:', { userid, password, rememberMe });
+        // 실제로는 서버에 인증 요청을 보내야 함
+    });
+    
+    // 회원가입 폼 제출
+    document.getElementById('register-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const userid = document.getElementById('register-userid').value;
+        const nickname = document.getElementById('register-nickname').value;
+        const password = document.getElementById('register-password').value;
+        const passwordConfirm = document.getElementById('register-password-confirm').value;
+        
+        // 비밀번호 일치 확인
+        if (password !== passwordConfirm) {
+            alert('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+        
+        // 여기에 회원가입 처리 로직 추가
+        console.log('회원가입 시도:', { userid, nickname, password });
+        // 실제로는 서버에 가입 요청을 보내야 함
+    });
+});
+
 // 페이지 로드 시 Google Maps API가 로드된 후 initMap 함수가 호출됩니다.
 // Google Maps API 스크립트에 async와 defer 속성이 있으므로 이 파일은 별도의 window.onload 처리가 필요 없습니다. 
