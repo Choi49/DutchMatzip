@@ -420,12 +420,30 @@ function addRestaurantMarkers() {
             showRestaurantCard(restaurant);
         });
         
+        // 마커 마우스 오버 시 이름 표시를 위한 InfoWindow 생성
+        const infoWindow = new google.maps.InfoWindow({
+            content: `<div class="marker-tooltip">${restaurant.name}</div>`,
+            disableAutoPan: true, // 지도가 자동으로 중앙 이동하지 않도록 설정
+            pixelOffset: new google.maps.Size(0, -25) // 마커 위에 표시되도록 오프셋 조정
+        });
+        
+        // 마우스 오버 이벤트 리스너 추가
+        marker.addListener("mouseover", () => {
+            infoWindow.open(map, marker);
+        });
+        
+        // 마우스 아웃 이벤트 리스너 추가
+        marker.addListener("mouseout", () => {
+            infoWindow.close();
+        });
+        
         // 마커 배열에 추가
         markers.push({
             marker: marker,
             category: restaurant.category,
             rating: restaurant.rating,
-            restaurant: restaurant
+            restaurant: restaurant,
+            infoWindow: infoWindow // InfoWindow 객체도 저장
         });
     });
     
@@ -433,288 +451,6 @@ function addRestaurantMarkers() {
     
     // 사이드바에 식당 목록 표시
     updateRestaurantList();
-}
-
-// 마커 전체 제거 함수
-function clearMarkers() {
-    markers.forEach((markerObj) => {
-        markerObj.marker.setMap(null);
-    });
-    markers = [];
-}
-
-// 카테고리에 따른 클래스 반환 함수
-function getCategoryClass(category) {
-    switch (category) {
-        case '한식': return 'korean';
-        case '일식': return 'japanese';
-        case '중식': return 'chinese';
-        case '양식': return 'western';
-        case '카페': return 'cafe';
-        default: return '';
-    }
-}
-
-// 카테고리에 따른 색상 반환 함수
-function getCategoryColor(category) {
-    switch (category) {
-        case '한식': return '#e74c3c';
-        case '일식': return '#3498db';
-        case '중식': return '#f39c12';
-        case '양식': return '#2ecc71';
-        case '카페': return '#9b59b6';
-        default: return '#95a5a6';
-    }
-}
-
-// 필터링 이벤트 리스너 설정 함수
-function setupFilterListeners() {
-    // 카테고리 필터
-    const categoryCheckboxes = document.querySelectorAll('.category-filters input[type="checkbox"]');
-    categoryCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', filterRestaurants);
-    });
-    
-    // 평점 필터
-    const ratingRadios = document.querySelectorAll('.rating-filters input[type="radio"]');
-    ratingRadios.forEach((radio) => {
-        radio.addEventListener('change', filterRestaurants);
-    });
-    
-    // 지역 필터
-    document.getElementById('city-select').addEventListener('change', filterRestaurants);
-}
-
-// 필터링된 레스토랑 가져오기
-async function filterRestaurants() {
-    const selectedCategories = getSelectedCategories();
-    const selectedCity = document.getElementById("city-select").value;
-    
-    // 필터 객체 생성
-    const filters = {};
-    
-    if (selectedCategories.length > 0) {
-        filters.category = selectedCategories.join(',');
-    }
-    
-    if (selectedCity && selectedCity !== "도시 선택") {
-        filters.city = selectedCity;
-    }
-    
-    // API 호출하여 필터링된 레스토랑 가져오기
-    const filteredRestaurants = await fetchRestaurants(filters);
-    
-    // 전역 restaurants 변수를 새로운 결과로 완전히 대체
-    restaurants = filteredRestaurants;
-    
-    // 마커 및 목록 업데이트
-    addRestaurantMarkers();
-    
-    // 식당 목록 UI 갱신 - 명시적으로 호출
-    updateRestaurantList();
-}
-
-// 선택된 카테고리 가져오기
-function getSelectedCategories() {
-    const categoryCheckboxes = document.querySelectorAll('.category-filters input[type="checkbox"]:checked');
-    return Array.from(categoryCheckboxes).map(checkbox => checkbox.value);
-}
-
-// 검색 기능 설정 함수
-function setupSearch() {
-    const searchButton = document.getElementById('search-button');
-    const searchInput = document.getElementById('search-input');
-    
-    searchButton.addEventListener('click', () => {
-        performSearch(searchInput.value);
-    });
-    
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performSearch(searchInput.value);
-        }
-    });
-}
-
-// 검색 실행 함수
-async function performSearch(query) {
-    // 검색어가 비어 있는 경우, 현재 필터링된 데이터로 목록을 복원
-    if (!query.trim()) {
-        // 구글 검색 마커들 제거
-        clearPlacesMarkers();
-        
-        // 현재 선택된 필터로 다시 데이터 불러오기
-        await filterRestaurants();
-        
-        // 지도 뷰 조정
-        fitMapToMarkers();
-        
-        console.log('검색어가 비어 있어 필터링된 맛집 목록을 표시합니다.');
-        return;
-    }
-    
-    // 검색 시작 시 로딩 표시 (선택적)
-    console.log(`"${query}" 검색 중...`);
-    
-    // 구글 검색 마커들 제거
-    clearPlacesMarkers();
-    
-    try {
-        // 1. 서버 API를 통한 레스토랑 검색
-        const searchResults = await searchRestaurants(query);
-        
-        // 서버 검색 결과로 맛집 목록 업데이트
-        if (searchResults.length > 0) {
-            restaurants = searchResults;
-            
-            // 마커와 목록 업데이트
-            addRestaurantMarkers();
-            updateRestaurantList();
-            
-            // 지도 뷰 조정
-            fitMapToMarkers();
-            
-            console.log(`서버에서 ${searchResults.length}개의 맛집을 찾았습니다.`);
-        } else {
-            // 검색 결과가 없으면 모든 마커 숨기기
-            markers.forEach(m => m.marker.setVisible(false));
-            
-            // 빈 목록 업데이트
-            updateRestaurantList();
-            
-            console.log('서버에서 일치하는 맛집을 찾지 못했습니다.');
-        }
-        
-        // 2. 동시에 Google Places API 검색 수행 (결과 유무와 관계없이)
-        searchGooglePlaces(query);
-        
-    } catch (error) {
-        console.error('검색 중 오류 발생:', error);
-        
-        // 오류 발생 시 Google Places 검색으로 대체
-        searchGooglePlaces(query);
-    }
-}
-
-// Google Places API로 장소 검색 수행 함수
-function searchGooglePlaces(query) {
-    const request = {
-        location: map.getCenter(),
-        radius: 5000,
-        query: query,
-        type: 'restaurant'
-    };
-    
-    console.log("Google Places 검색 요청:", request);
-    
-    placesService.textSearch(request, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-            console.log("Google Places 검색 결과:", results.length + "개 항목");
-            
-            // 이 부분을 수정: 맛집 마커를 숨기지 않고 구글 검색 결과 추가
-            showPlacesResults(results, false);
-        } else {
-            console.log('Google Places 검색 실패:', status);
-            
-            // 저장된 결과도 없고 구글 검색도 실패한 경우에만 알림
-            if (markers.every(m => !m.marker.getVisible()) && placesMarkers.length === 0) {
-                alert('검색 결과가 없습니다.');
-            }
-        }
-    });
-}
-
-// Google Places 검색 결과 표시 함수
-function showPlacesResults(places, hideRestaurantMarkers = true) {
-    // 이전 Places 마커 제거
-    clearPlacesMarkers();
-    
-    // 검색 결과가 없으면 종료
-    if (!places || places.length === 0) return;
-    
-    // 숨김 옵션이 활성화된 경우에만 저장된 맛집 마커 숨기기
-    if (hideRestaurantMarkers) {
-        markers.forEach(m => m.marker.setVisible(false));
-    }
-    
-    // 검색 결과 저장 (사이드바 표시용)
-    const placeResults = [];
-    
-    // 결과 마커 생성
-    places.forEach(place => {
-        // 이미 저장된 식당과 중복될 수 있으므로 위치 기준으로 중복 확인
-        const isDuplicate = markers.some(m => {
-            if (place.geometry && place.geometry.location) {
-                const placePos = place.geometry.location;
-                const markerPos = m.marker.getPosition();
-                // 거리가 30미터 이내면 중복으로 판단
-                return google.maps.geometry.spherical.computeDistanceBetween(placePos, markerPos) < 30;
-            }
-            return false;
-        });
-        
-        // 중복이 아닌 경우에만 표시
-        if (!isDuplicate && place.geometry && place.geometry.location) {
-            // 검색 결과 저장
-            placeResults.push(place);
-            
-            // 마커 생성
-            const markerIcon = {
-                path: 'M12,2C8.13,2,5,5.13,5,9c0,5.25,7,13,7,13s7-7.75,7-13C19,5.13,15.87,2,12,2z M12,11.5c-1.38,0-2.5-1.12-2.5-2.5s1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5S13.38,11.5,12,11.5z',
-                fillColor: '#888888', // 회색으로 구분
-                fillOpacity: 1,
-                strokeWeight: 1,
-                strokeColor: '#ffffff',
-                scale: 1.5,
-                anchor: new google.maps.Point(12, 22)
-            };
-            
-            const marker = new google.maps.Marker({
-                map: map,
-                position: place.geometry.location,
-                title: place.name,
-                icon: markerIcon,
-                animation: google.maps.Animation.DROP
-            });
-            
-            // 정보창 생성
-            const infoWindow = new google.maps.InfoWindow({
-                content: createPlaceInfoContent(place)
-            });
-            
-            // 마커 클릭 이벤트
-            marker.addListener('click', () => {
-                // 이전 정보창 닫기
-                if (currentInfoWindow) {
-                    currentInfoWindow.close();
-                }
-                
-                // 정보창 열기
-                infoWindow.open(map, marker);
-                currentInfoWindow = infoWindow;
-                
-                // 저장된 레스토랑 카드 닫기
-                hideRestaurantCard();
-            });
-            
-            // 마커 객체에 장소 정보 저장
-            marker.place = place;
-            
-            // 마커 배열에 추가
-            placesMarkers.push(marker);
-        }
-    });
-    
-    // 검색 결과를 사이드바에 표시
-    updateSidebarWithPlacesResults(placeResults);
-    
-    // 지도 뷰를 모든 마커가 보이도록 조정 (저장된 맛집이 없는 경우에만)
-    if (markers.every(m => !m.marker.getVisible()) && placesMarkers.length > 0) {
-        fitMapToMarkers();
-    } else if (placesMarkers.length > 0) {
-        // 저장된 맛집과 검색 결과가 모두 있는 경우 모든 마커가 보이도록 조정
-        fitMapToMarkers();
-    }
 }
 
 // Places 검색 결과를 사이드바에 표시하는 함수
@@ -828,6 +564,12 @@ function updateSidebarWithPlacesResults(places) {
 function clearPlacesMarkers() {
     placesMarkers.forEach(marker => {
         marker.setMap(null);
+        
+        // 현재 정보창이 이 마커와 관련되어 있다면 닫기
+        if (currentInfoWindow && marker.infoWindow === currentInfoWindow) {
+            currentInfoWindow.close();
+            currentInfoWindow = null;
+        }
     });
     placesMarkers = [];
 }
@@ -2430,6 +2172,19 @@ document.addEventListener('DOMContentLoaded', function() {
         register(account, username, password);
     });
     
+    // 레스토랑 카드 닫기 버튼 이벤트 리스너 재등록
+    const closeRestaurantCardBtn = document.getElementById('close-restaurant-card');
+    if (closeRestaurantCardBtn) {
+        // 기존 이벤트 리스너 제거를 위해 복제 후 교체
+        const newCloseBtn = closeRestaurantCardBtn.cloneNode(true);
+        closeRestaurantCardBtn.parentNode.replaceChild(newCloseBtn, closeRestaurantCardBtn);
+        
+        // 새 이벤트 리스너 추가
+        newCloseBtn.addEventListener('click', function() {
+            hideRestaurantCard();
+        });
+    }
+    
     // 페이지 로드 시 인증 상태 확인
     checkAuth();
 });
@@ -2476,4 +2231,131 @@ async function deleteRestaurant(restaurantId) {
         console.error('레스토랑 삭제 API 호출 오류:', error);
         return { success: false, error: '서버 연결 오류가 발생했습니다.' };
     }
-} 
+}
+
+// 마커 전체 제거 함수
+function clearMarkers() {
+    markers.forEach((markerObj) => {
+        // 마커 제거
+        markerObj.marker.setMap(null);
+        
+        // 해당 마커의 InfoWindow가 있다면 닫기
+        if (markerObj.infoWindow) {
+            markerObj.infoWindow.close();
+        }
+    });
+    markers = [];
+}
+
+// Google Places 검색 결과 표시 함수
+function showPlacesResults(places, hideRestaurantMarkers = true) {
+    // 이전 Places 마커 제거
+    clearPlacesMarkers();
+    
+    // 검색 결과가 없으면 종료
+    if (!places || places.length === 0) return;
+    
+    // 숨김 옵션이 활성화된 경우에만 저장된 맛집 마커 숨기기
+    if (hideRestaurantMarkers) {
+        markers.forEach(m => m.marker.setVisible(false));
+    }
+    
+    // 검색 결과 저장 (사이드바 표시용)
+    const placeResults = [];
+    
+    // 결과 마커 생성
+    places.forEach(place => {
+        // 이미 저장된 식당과 중복될 수 있으므로 위치 기준으로 중복 확인
+        const isDuplicate = markers.some(m => {
+            if (place.geometry && place.geometry.location) {
+                const placePos = place.geometry.location;
+                const markerPos = m.marker.getPosition();
+                // 거리가 30미터 이내면 중복으로 판단
+                return google.maps.geometry.spherical.computeDistanceBetween(placePos, markerPos) < 30;
+            }
+            return false;
+        });
+        
+        // 중복이 아닌 경우에만 표시
+        if (!isDuplicate && place.geometry && place.geometry.location) {
+            // 검색 결과 저장
+            placeResults.push(place);
+            
+            // 마커 생성
+            const markerIcon = {
+                path: 'M12,2C8.13,2,5,5.13,5,9c0,5.25,7,13,7,13s7-7.75,7-13C19,5.13,15.87,2,12,2z M12,11.5c-1.38,0-2.5-1.12-2.5-2.5s1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5S13.38,11.5,12,11.5z',
+                fillColor: '#888888', // 회색으로 구분
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: '#ffffff',
+                scale: 1.5,
+                anchor: new google.maps.Point(12, 22)
+            };
+            
+            const marker = new google.maps.Marker({
+                map: map,
+                position: place.geometry.location,
+                title: place.name,
+                icon: markerIcon,
+                animation: google.maps.Animation.DROP
+            });
+            
+            // 정보창 생성
+            const infoWindow = new google.maps.InfoWindow({
+                content: createPlaceInfoContent(place)
+            });
+            
+            // 마커 클릭 이벤트
+            marker.addListener('click', () => {
+                // 이전 정보창 닫기
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
+                
+                // 정보창 열기
+                infoWindow.open(map, marker);
+                currentInfoWindow = infoWindow;
+                
+                // 저장된 레스토랑 카드 닫기
+                hideRestaurantCard();
+            });
+            
+            // 마커 마우스 오버 시 이름 표시를 위한 간단한 InfoWindow 생성
+            const hoverInfoWindow = new google.maps.InfoWindow({
+                content: `<div class="marker-tooltip">${place.name}</div>`,
+                disableAutoPan: true, // 지도가 자동으로 중앙 이동하지 않도록 설정
+                pixelOffset: new google.maps.Size(0, -25) // 마커 위에 표시되도록 오프셋 조정
+            });
+            
+            // 마우스 오버 이벤트 리스너 추가
+            marker.addListener("mouseover", () => {
+                // 클릭으로 열린 정보창이 있으면 마우스오버 정보창을 표시하지 않음
+                if (currentInfoWindow !== infoWindow) {
+                    hoverInfoWindow.open(map, marker);
+                }
+            });
+            
+            // 마우스 아웃 이벤트 리스너 추가
+            marker.addListener("mouseout", () => {
+                hoverInfoWindow.close();
+            });
+            
+            // 마커 객체에 장소 정보 저장
+            marker.place = place;
+            
+            // 마커 배열에 추가
+            placesMarkers.push(marker);
+        }
+    });
+    
+    // 검색 결과를 사이드바에 표시
+    updateSidebarWithPlacesResults(placeResults);
+    
+    // 지도 뷰를 모든 마커가 보이도록 조정 (저장된 맛집이 없는 경우에만)
+    if (markers.every(m => !m.marker.getVisible()) && placesMarkers.length > 0) {
+        fitMapToMarkers();
+    } else if (placesMarkers.length > 0) {
+        // 저장된 맛집과 검색 결과가 모두 있는 경우 모든 마커가 보이도록 조정
+        fitMapToMarkers();
+    }
+}
