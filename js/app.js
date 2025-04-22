@@ -3,6 +3,7 @@ let map;
 let markers = [];
 let currentInfoWindow = null;
 let restaurants = [];
+let currentRestaurantId = null; // 현재 선택된 레스토랑 ID
 const API_URL = 'http://localhost:5000/api';
 
 // 유저 상태 관리를 위한 전역 변수
@@ -234,7 +235,6 @@ const mapStyle = [
 ];
 
 // 현재 선택된 레스토랑 ID
-let currentRestaurantId = null;
 let selectedRating = 0;
 
 // 사이드바 상태
@@ -933,6 +933,21 @@ function fitMapToMarkers() {
 function showRestaurantCard(restaurant) {
     const card = document.getElementById('restaurant-card');
     
+    // 다른 레스토랑을 보는 경우, 이전 레스토랑의 리뷰를 모두 비웁니다
+    if (currentRestaurantId !== restaurant.id) {
+        const reviewsContainer = document.getElementById('reviews-container');
+        const noReviewsMessage = document.getElementById('no-reviews-message');
+        
+        // 이전 리뷰 전체 삭제 (lastChild부터 지우기)
+        while (reviewsContainer.lastChild && reviewsContainer.lastChild !== noReviewsMessage) {
+            reviewsContainer.removeChild(reviewsContainer.lastChild);
+            console.log("remove from lastChild");
+        }
+        
+        // 리뷰 없음 메시지 표시
+        noReviewsMessage.style.display = 'block';
+    }
+    
     // 현재 선택된 레스토랑 ID 설정
     currentRestaurantId = restaurant.id;
     
@@ -1051,6 +1066,21 @@ function confirmDeleteRestaurant() {
 function hideRestaurantCard() {
     const card = document.getElementById('restaurant-card');
     card.classList.add('d-none');
+    
+    // 레스토랑 카드를 숨길 때 리뷰 컨테이너도 초기화
+    const reviewsContainer = document.getElementById('reviews-container');
+    const noReviewsMessage = document.getElementById('no-reviews-message');
+    
+    // 모든 리뷰 삭제 (lastChild부터 지우기)
+    while (reviewsContainer.lastChild && reviewsContainer.lastChild !== noReviewsMessage) {
+        reviewsContainer.removeChild(reviewsContainer.lastChild);
+    }
+    
+    // 리뷰 없음 메시지 표시
+    noReviewsMessage.style.display = 'block';
+    
+    // 현재 레스토랑 ID 초기화
+    currentRestaurantId = null;
 }
 
 // 리뷰 모달 표시 함수
@@ -1226,9 +1256,9 @@ function loadReviews(restaurantId) {
     const reviewsContainer = document.getElementById('reviews-container');
     const noReviewsMessage = document.getElementById('no-reviews-message');
     
-    // 이전 리뷰 삭제
-    while (reviewsContainer.firstChild && reviewsContainer.firstChild !== noReviewsMessage) {
-        reviewsContainer.removeChild(reviewsContainer.firstChild);
+    // 이전 리뷰 전체 삭제 (lastChild부터 지우기)
+    while (reviewsContainer.lastChild && reviewsContainer.lastChild !== noReviewsMessage) {
+        reviewsContainer.removeChild(reviewsContainer.lastChild);
     }
     
     // 리뷰가 없으면 메시지 표시
