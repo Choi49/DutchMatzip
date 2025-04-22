@@ -943,11 +943,8 @@ function setupMobileResultsGestures() {
     const mobileContainer = document.querySelector('.mobile-results-container');
     const handle = mobileContainer.querySelector('.handle');
     const headerElement = mobileContainer.querySelector('.mobile-results-header');
+    const contentElement = mobileContainer.querySelector('.mobile-results-content');
     const map = document.getElementById('map');
-    
-    let startY = 0;
-    let startHeight = 0;
-    let isPeeking = mobileContainer.classList.contains('peek');
     
     // 지도 크기 조정 함수
     function adjustMapHeight() {
@@ -977,127 +974,38 @@ function setupMobileResultsGestures() {
         }
     }
     
-    // 핸들 및 헤더 터치 이벤트 추가
-    handle.addEventListener('touchstart', handleTouchStart);
-    headerElement.addEventListener('touchstart', handleTouchStart);
+    // 헤더 클릭 시 결과창 토글 (peek <-> show)
+    headerElement.addEventListener('click', toggleResultsContainer);
     
-    // 터치 시작 함수
-    function handleTouchStart(e) {
-        startY = e.touches[0].clientY;
-        startHeight = mobileContainer.getBoundingClientRect().height;
+    // 결과 컨테이너 토글 함수
+    function toggleResultsContainer() {
+        // 트랜지션 효과 적용
+        mobileContainer.style.transition = 'transform 0.3s ease';
         
-        // 트랜지션 효과 제거 (드래그 중에는 부드럽게 움직이도록)
-        mobileContainer.style.transition = 'none';
-    }
-    
-    // 화면에 터치 이동 이벤트 추가
-    document.addEventListener('touchmove', function(e) {
-        if (startY > 0) {
-            const currentY = e.touches[0].clientY;
-            const diff = currentY - startY;
-            
-            // 변경된 높이에 따른 변환 계산
-            const windowHeight = window.innerHeight;
-            const containerHeight = mobileContainer.getBoundingClientRect().height;
-            
-            // 위로 스와이프 (컨테이너 열기)
-            if (diff < 0) {
-                if (isPeeking) {
-                    // peek 상태에서 완전히 열기
-                    const percentOpen = Math.min(1, Math.abs(diff) / (containerHeight * 2));
-                    const translateY = 100 - (percentOpen * 100);
-                    
-                    if (translateY < 30) { // 충분히 위로 스와이프 했으면 완전히 열기
-                        mobileContainer.classList.remove('peek');
-                        mobileContainer.classList.add('show');
-                        mobileContainer.style.transform = '';
-                        isPeeking = false;
-                        
-                        // 헤더 스타일 조정
-                        const contentElement = mobileContainer.querySelector('.mobile-results-content');
-                        if (contentElement) {
-                            contentElement.style.display = 'block';
-                        }
-                    } else {
-                        mobileContainer.style.transform = `translateY(calc(100% - 50px - ${Math.abs(diff)}px))`;
-                    }
-                }
-            } 
-            // 아래로 스와이프 (컨테이너 닫기 또는 peek 상태로)
-            else if (diff > 0) {
-                if (!isPeeking) {
-                    // 완전히 열린 상태에서 peek 상태로 전환
-                    const percentClosed = Math.min(1, diff / (containerHeight * 0.7));
-                    const translateY = percentClosed * 100;
-                    
-                    if (translateY > 70) { // 충분히 아래로 스와이프 했으면 peek 상태로
-                        mobileContainer.classList.remove('show');
-                        mobileContainer.classList.add('peek');
-                        mobileContainer.style.transform = '';
-                        isPeeking = true;
-                    } else {
-                        mobileContainer.style.transform = `translateY(${translateY}%)`;
-                    }
-                }
-            }
-            
-            // 지도 높이 실시간 조정
-            adjustMapHeight();
-        }
-    });
-    
-    // 터치 종료 이벤트 추가
-    document.addEventListener('touchend', function(e) {
-        if (startY > 0) {
-            startY = 0;
-            
-            // 트랜지션 효과 복원
-            mobileContainer.style.transition = 'transform 0.3s ease';
-            
-            // 현재 변환값 가져오기
-            const transformValue = mobileContainer.style.transform;
-            const translateValue = transformValue ? 
-                parseFloat(transformValue.replace(/[^\d.-]/g, '')) : 0;
-            
-            // 상태에 따라 적절히 처리
-            if (isPeeking) {
-                // peek 상태인 경우: 위로 충분히 스와이프 했으면 show로 전환
-                if (transformValue && translateValue < 40) {
-                    mobileContainer.classList.remove('peek');
-                    mobileContainer.classList.add('show');
-                    isPeeking = false;
-                } else {
-                    mobileContainer.style.transform = '';
-                }
-            } else {
-                // show 상태인 경우: 아래로 충분히 스와이프 했으면 peek로 전환
-                if (transformValue && translateValue > 50) {
-                    peekMobileResults();
-                    isPeeking = true;
-                } else {
-                    mobileContainer.style.transform = '';
-                }
-            }
-            
-            // 지도 높이 조정
-            adjustMapHeight();
-        }
-    });
-    
-    // peek 상태에서 헤더 클릭 시 열기
-    headerElement.addEventListener('click', function() {
+        // 현재 상태에 따라 토글
         if (mobileContainer.classList.contains('peek')) {
+            // peek 상태면 show로 변경
             mobileContainer.classList.remove('peek');
             mobileContainer.classList.add('show');
+            
             // 콘텐츠 표시
             const contentElement = mobileContainer.querySelector('.mobile-results-content');
             if (contentElement) {
                 contentElement.style.display = 'block';
             }
-            
-            // 지도 높이 조정
-            adjustMapHeight();
+        } else {
+            // show 상태면 peek로 변경
+            mobileContainer.classList.remove('show');
+            mobileContainer.classList.add('peek');
         }
+        
+        // 지도 높이 조정
+        adjustMapHeight();
+    }
+    
+    // 콘텐츠 영역은 이벤트 버블링 방지 (헤더 클릭 이벤트가 발생하지 않도록)
+    contentElement.addEventListener('click', function(e) {
+        e.stopPropagation();
     });
     
     // 초기 지도 높이 조정
