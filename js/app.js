@@ -240,6 +240,59 @@ let selectedRating = 0;
 // 사이드바 상태
 let sidebarVisible = false;
 
+// 이미지 URL 캐싱 유틸리티 (파일 상단에 추가)
+const imageCache = {
+  // 이미지 URL 캐시에 저장 (24시간 유효)
+  setImageUrl: function(placeId, imageUrl) {
+    const now = new Date();
+    const cacheItem = {
+      url: imageUrl,
+      timestamp: now.getTime(),
+      expires: now.getTime() + (24 * 60 * 60 * 1000) // 24시간 유효
+    };
+    
+    localStorage.setItem(`restaurant_img_${placeId}`, JSON.stringify(cacheItem));
+    return imageUrl;
+  },
+  
+  // 캐시에서 이미지 URL 가져오기
+  getImageUrl: function(placeId) {
+    const cacheJson = localStorage.getItem(`restaurant_img_${placeId}`);
+    if (!cacheJson) return null;
+    
+    const cacheItem = JSON.parse(cacheJson);
+    const now = new Date().getTime();
+    
+    // 캐시 만료 확인
+    if (now > cacheItem.expires) {
+      localStorage.removeItem(`restaurant_img_${placeId}`);
+      return null;
+    }
+    
+    return cacheItem.url;
+  },
+  
+  // 캐시 정리 함수
+  cleanupCache: function() {
+    if (localStorage.length > 100) { // 캐시 항목이 많아지면 정리
+      const now = new Date().getTime();
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('restaurant_img_')) {
+          try {
+            const item = JSON.parse(localStorage.getItem(key));
+            // 12시간 이상 된 항목 삭제
+            if (item.timestamp && (now - item.timestamp > 12 * 60 * 60 * 1000)) {
+              localStorage.removeItem(key);
+            }
+          } catch(e) { /* 오류 처리 */ }
+        }
+      }
+    }
+  }
+};
+
 // 지도 초기화
 function initMap() {
     // 네덜란드 암스테르담 중심 좌표
@@ -282,6 +335,8 @@ function initMap() {
     
     // 사이드바 토글 버튼 이벤트 리스너
     setupSidebar();
+    
+    imageCache.cleanupCache();
 }
 
 // 서버에서 레스토랑 데이터 로드
@@ -895,9 +950,47 @@ function showRestaurantCard(restaurant) {
     }
     mapsLink.href = googleMapsUrl;
     
-    // 이미지 표시
-    const imageContainer = card.querySelector('.restaurant-image');
-    imageContainer.innerHTML = `<img src="${restaurant.image}" alt="${restaurant.name}" class="img-fluid rounded">`;
+    // 레스토랑 이미지 표시 부분 수정
+    const imageContainer = document.querySelector('.restaurant-image');
+    
+    // 1. 커스텀 이미지가 있는 경우
+    if (restaurant.image) {
+        imageContainer.innerHTML = `<img src="${restaurant.image}" class="img-fluid rounded" alt="${restaurant.name}">`;
+    } 
+    // 2. 커스텀 이미지가 없고 placeId가 있는 경우
+    else if (restaurant.placeId) {
+        // 캐시 확인
+        const cachedImageUrl = imageCache.getImageUrl(restaurant.placeId);
+        
+        if (cachedImageUrl) {
+            // 캐시된 이미지 URL 사용
+            imageContainer.innerHTML = `<img src="${cachedImageUrl}" class="img-fluid rounded" alt="${restaurant.name}">`;
+        } else {
+            // 로딩 표시
+            imageContainer.innerHTML = `<div class="text-center p-3"><div class="spinner-border text-primary" role="status"></div></div>`;
+            
+            // Google Places API로 이미지 가져오기
+            placesService.getDetails({ placeId: restaurant.placeId }, (place, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && place.photos && place.photos.length > 0) {
+                    // 최신 이미지 URL 가져오기
+                    const imageUrl = place.photos[0].getUrl({ maxWidth: 1000, maxHeight: 600 });
+                    
+                    // 이미지 표시
+                    imageContainer.innerHTML = `<img src="${imageUrl}" class="img-fluid rounded" alt="${restaurant.name}">`;
+                    
+                    // 캐시에 저장
+                    imageCache.setImageUrl(restaurant.placeId, imageUrl);
+                } else {
+                    // 기본 이미지 표시
+                    imageContainer.innerHTML = `<img src="/images/default-restaurant.jpg" class="img-fluid rounded" alt="${restaurant.name}">`;
+                }
+            });
+        }
+    } 
+    // 3. 아무 이미지도 없는 경우
+    else {
+        imageContainer.innerHTML = `<img src="/images/default-restaurant.jpg" class="img-fluid rounded" alt="${restaurant.name}">`;
+    }
     
     // 삭제 버튼 관련 로직
     const headerActions = card.querySelector('.card-header .d-flex');
@@ -1399,10 +1492,21 @@ async function submitNewRestaurant() {
         formData.append('image', imageFile);
     }
     
-    // 선택적 필드: 장소 ID
+    // Place ID 저장 (Google 이미지 URL을 동적으로 가져오기 위함)
     const placeId = document.getElementById('restaurant-place-id');
     if (placeId && placeId.value) {
         formData.append('placeId', placeId.value);
+        
+        // 사용자가 이미지를 업로드하지 않았고, Google 이미지가 있다면 미리 캐싱
+        if (!imageFile) {
+            placesService.getDetails({ placeId: placeId.value }, (place, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && 
+                    place.photos && place.photos.length > 0) {
+                    const imageUrl = place.photos[0].getUrl({ maxWidth: 1000, maxHeight: 600 });
+                    imageCache.setImageUrl(placeId.value, imageUrl);
+                }
+            });
+        }
     }
     
     // 화면에 로딩 표시

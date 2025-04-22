@@ -7,7 +7,7 @@ const { uploadImage } = require('../config/cloudinary');
 // 모든 레스토랑 조회
 router.get('/', async (req, res) => {
   try {
-    // 필터링 옵션
+    // 필터링 옵션 
     const filter = {};
     if (req.query.category) {
       const categories = req.query.category.split(',');
@@ -118,7 +118,7 @@ router.get('/:id', async (req, res) => {
 // 새 레스토랑 등록 (로그인 필수)
 router.post('/', protect, uploadImage.single('image'), async (req, res) => {
   try {
-    // req.body에서 필요한 데이터 추출
+    // req.body에서 필요한 데이터 추출 - placeId 포함
     const { name, category, address, city, lat, lng, placeId } = req.body;
 
     // 필수 필드 검증
@@ -155,7 +155,7 @@ router.post('/', protect, uploadImage.single('image'), async (req, res) => {
       });
     }
 
-    // 새 레스토랑 생성 - 이미지 URL 포함
+    // 새 레스토랑 생성 - placeId 포함
     const newRestaurant = new Restaurant({
       name,
       category,
@@ -163,8 +163,7 @@ router.post('/', protect, uploadImage.single('image'), async (req, res) => {
       city,
       lat,
       lng,
-      placeId,
-      // Cloudinary에서 제공한 URL 사용
+      placeId, // 추가: Google Place ID 저장
       image: req.file ? req.file.path : undefined,
       userId: req.user._id
     });
