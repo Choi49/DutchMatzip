@@ -2359,3 +2359,219 @@ function showPlacesResults(places, hideRestaurantMarkers = true) {
         fitMapToMarkers();
     }
 }
+
+// 네덜란드 주요 도시 좌표 정보
+const CITY_COORDINATES = {
+    amsterdam: { lat: 52.3676, lng: 4.9041, zoom: 12 }, // 암스테르담
+    rotterdam: { lat: 51.9244, lng: 4.4777, zoom: 12 }, // 로테르담
+    hague: { lat: 52.0705, lng: 4.3007, zoom: 12 },     // 헤이그
+    utrecht: { lat: 52.0907, lng: 5.1214, zoom: 12 },   // 위트레흐트
+    eindhoven: { lat: 51.4416, lng: 5.4697, zoom: 12 }, // 아인트호벤
+    // 기타 지역은 따로 좌표 정의 안함
+};
+
+// 필터링된 레스토랑 가져오기
+async function filterRestaurants() {
+    const selectedCategories = getSelectedCategories();
+    const selectedCity = document.getElementById("city-select").value;
+    
+    // 필터 객체 생성
+    const filters = {};
+    
+    if (selectedCategories.length > 0) {
+        filters.category = selectedCategories.join(',');
+    }
+    
+    if (selectedCity && selectedCity !== "도시 선택") {
+        filters.city = selectedCity;
+        
+        // 도시 영역 표시 (원 추가 및 지도 이동)
+        setCityOnMap(selectedCity);
+    } else {
+        // 도시 선택이 없으면 원 제거
+        if (cityCircle) {
+            cityCircle.setMap(null);
+            cityCircle = null;
+        }
+    }
+    
+    // API 호출하여 필터링된 레스토랑 가져오기
+    const filteredRestaurants = await fetchRestaurants(filters);
+    
+    // 전역 restaurants 변수를 새로운 결과로 완전히 대체
+    restaurants = filteredRestaurants;
+    
+    // 마커 및 목록 업데이트
+    addRestaurantMarkers();
+    
+    // 식당 목록 UI 갱신 - 명시적으로 호출
+    updateRestaurantList();
+    
+    // 필터링 후 결과가 있고, 특정 도시가 선택되지 않았다면 마커에 맞게 지도 뷰 조정
+    if (restaurants.length > 0 && (!selectedCity || selectedCity === "도시 선택" || selectedCity === "other")) {
+        fitMapToMarkers();
+    }
+}
+
+// 필터링 이벤트 리스너 설정 함수
+function setupFilterListeners() {
+    // 카테고리 필터
+    const categoryCheckboxes = document.querySelectorAll('.category-filters input[type="checkbox"]');
+    categoryCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', filterRestaurants);
+    });
+    
+    // 지역 필터
+    document.getElementById('city-select').addEventListener('change', filterRestaurants);
+}
+
+// 선택된 카테고리 가져오기
+function getSelectedCategories() {
+    const categoryCheckboxes = document.querySelectorAll('.category-filters input[type="checkbox"]:checked');
+    return Array.from(categoryCheckboxes).map(checkbox => checkbox.value);
+}
+
+// 전역 변수 추가
+let cityCircle = null;
+
+// 도시 선택에 따른 지도 영역 설정 함수
+function setCityOnMap(city) {
+    // 기존 원 제거
+    if (cityCircle) {
+        cityCircle.setMap(null);
+    }
+    
+    // 도시 선택이 없거나 '기타'인 경우 아무것도 하지 않음
+    if (!city || city === "도시 선택" || city === "other") {
+        return;
+    }
+    
+    // 도시 좌표가 없으면 리턴
+    if (!CITY_COORDINATES[city]) {
+        return;
+    }
+    
+    // 선택된 도시 좌표
+    const cityCoord = CITY_COORDINATES[city];
+    
+    // 지도 이동
+    map.setCenter({ lat: cityCoord.lat, lng: cityCoord.lng });
+    map.setZoom(cityCoord.zoom);
+    
+    // 선택한 도시를 표시하는 원 생성
+    cityCircle = new google.maps.Circle({
+        strokeColor: '#3498db',
+        strokeOpacity: 0.3,
+        strokeWeight: 2,
+        fillColor: '#3498db',
+        fillOpacity: 0.05,
+        map: map,
+        center: { lat: cityCoord.lat, lng: cityCoord.lng },
+        radius: 5000, // 5km 반경
+        zIndex: -1  // 마커 뒤에 표시되도록
+    });
+}
+
+// 검색 기능 설정 함수
+function setupSearch() {
+    const searchButton = document.getElementById('search-button');
+    const searchInput = document.getElementById('search-input');
+    
+    searchButton.addEventListener('click', () => {
+        performSearch(searchInput.value);
+    });
+    
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch(searchInput.value);
+        }
+    });
+}
+
+// 검색 실행 함수
+async function performSearch(query) {
+    // 검색어가 비어 있는 경우, 현재 필터링된 데이터로 목록을 복원
+    if (!query.trim()) {
+        // 구글 검색 마커들 제거
+        clearPlacesMarkers();
+        
+        // 현재 선택된 필터로 다시 데이터 불러오기
+        await filterRestaurants();
+        
+        // 지도 뷰 조정
+        fitMapToMarkers();
+        
+        console.log('검색어가 비어 있어 필터링된 맛집 목록을 표시합니다.');
+        return;
+    }
+    
+    // 검색 시작 시 로딩 표시 (선택적)
+    console.log(`"${query}" 검색 중...`);
+    
+    // 구글 검색 마커들 제거
+    clearPlacesMarkers();
+    
+    try {
+        // 1. 서버 API를 통한 레스토랑 검색
+        const searchResults = await searchRestaurants(query);
+        
+        // 서버 검색 결과로 맛집 목록 업데이트
+        if (searchResults.length > 0) {
+            restaurants = searchResults;
+            
+            // 마커와 목록 업데이트
+            addRestaurantMarkers();
+            updateRestaurantList();
+            
+            // 지도 뷰 조정
+            fitMapToMarkers();
+            
+            console.log(`서버에서 ${searchResults.length}개의 맛집을 찾았습니다.`);
+        } else {
+            // 검색 결과가 없으면 모든 마커 숨기기
+            markers.forEach(m => m.marker.setVisible(false));
+            
+            // 빈 목록 업데이트
+            updateRestaurantList();
+            
+            console.log('서버에서 일치하는 맛집을 찾지 못했습니다.');
+        }
+        
+        // 2. 동시에 Google Places API 검색 수행 (결과 유무와 관계없이)
+        searchGooglePlaces(query);
+        
+    } catch (error) {
+        console.error('검색 중 오류 발생:', error);
+        
+        // 오류 발생 시 Google Places 검색으로 대체
+        searchGooglePlaces(query);
+    }
+}
+
+// Google Places API로 장소 검색 수행 함수
+function searchGooglePlaces(query) {
+    const request = {
+        location: map.getCenter(),
+        radius: 5000,
+        query: query,
+        type: 'restaurant'
+    };
+    
+    console.log("Google Places 검색 요청:", request);
+    
+    placesService.textSearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+            console.log("Google Places 검색 결과:", results.length + "개 항목");
+            
+            // 이 부분을 수정: 맛집 마커를 숨기지 않고 구글 검색 결과 추가
+            showPlacesResults(results, false);
+        } else {
+            console.log('Google Places 검색 실패:', status);
+            
+            // 저장된 결과도 없고 구글 검색도 실패한 경우에만 알림
+            if (markers.every(m => !m.marker.getVisible()) && placesMarkers.length === 0) {
+                alert('검색 결과가 없습니다.');
+            }
+        }
+    });
+}
