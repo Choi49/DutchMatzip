@@ -3044,7 +3044,6 @@ function setupSearch() {
 // 검색 실행 함수
 async function performSearch(query) {
     // 검색어가 비어 있는 경우, 현재 필터링된 데이터로 목록을 복원
-    console.log("performSearch 호출");
 
     if (!query.trim()) {
         // 구글 검색 마커들 제거
@@ -3105,6 +3104,8 @@ async function performSearch(query) {
         // 오류 발생 시 Google Places 검색으로 대체
         searchGooglePlaces(query);
     }
+
+    setupMobileResultsGestures();
 }
 
 // Google Places API로 장소 검색 수행 함수
