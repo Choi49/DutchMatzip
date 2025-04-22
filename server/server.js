@@ -3,6 +3,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
 require('dotenv').config();
+const axios = require('axios');
 
 // MongoDB 연결
 connectDB();
@@ -24,13 +25,25 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/reviews', require('./routes/reviews'));
 
 // 정적 파일 제공 설정
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../', 'index.html'));
-  });
-}
+app.use(express.static(path.join(__dirname, '../')));
+
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+app.get('/api/maps-api', async (req, res) => {
+  try {
+    const { libraries, callback } = req.query;
+    const url = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=${libraries}&callback=${callback}`;
+    const response = await axios.get(url);
+    res.send(response.data);
+  } catch (error) {
+    res.status(500).send('오류가 발생했습니다');
+  }
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../', 'index.html'));
+});
 
 // 서버 시작
 app.listen(PORT, () => {

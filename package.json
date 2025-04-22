@@ -1,0 +1,11 @@
+{
+    "name": "dutchmatzip",
+    "version": "1.0.0",
+    "engines": {
+      "node": "22.x"
+    },
+    "scripts": {
+      "start": "node server/server.js",
+      "heroku-postbuild": "cd server && npm install"
+    }
+  }
