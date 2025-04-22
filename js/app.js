@@ -715,12 +715,12 @@ function updateSidebarWithPlacesResults(places) {
             divider.className = 'dropdown-divider my-3';
             listContainer.appendChild(divider);
         }
-        
+            
         // 구글 검색 결과 제목 항상 추가
-        const heading = document.createElement('h6');
-        heading.className = 'text-muted px-3 py-1';
-        heading.textContent = '구글 검색 결과';
-        listContainer.appendChild(heading);
+            const heading = document.createElement('h6');
+            heading.className = 'text-muted px-3 py-1';
+            heading.textContent = '구글 검색 결과';
+            listContainer.appendChild(heading);
         
         // 모바일 뷰에도 구분선 추가 (저장된 맛집이 있는 경우에만)
         if (visibleRestaurants.length > 0) {
@@ -2864,7 +2864,7 @@ async function deleteRestaurant(restaurantId) {
         console.error('레스토랑 삭제 API 호출 오류:', error);
         return { success: false, error: '서버 연결 오류가 발생했습니다.' };
     }
-}
+} 
 
 // 마커 전체 제거 함수
 function clearMarkers() {
