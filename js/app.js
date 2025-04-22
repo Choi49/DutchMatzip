@@ -4,7 +4,7 @@ let markers = [];
 let currentInfoWindow = null;
 let restaurants = [];
 let currentRestaurantId = null; // 현재 선택된 레스토랑 ID
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 // 유저 상태 관리를 위한 전역 변수
 let currentUser = null;
