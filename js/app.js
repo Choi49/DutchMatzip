@@ -5,6 +5,38 @@ let currentInfoWindow = null;
 let restaurants = [];
 const API_URL = 'http://localhost:5000/api';
 
+// 유저 상태 관리를 위한 전역 변수
+let currentUser = null;
+
+// 로컬 스토리지에서 토큰 가져오기
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+// 로컬 스토리지에 토큰 저장
+function setToken(token) {
+    localStorage.setItem('token', token);
+}
+
+// 로컬 스토리지에서 토큰 삭제
+function removeToken() {
+    localStorage.removeItem('token');
+}
+
+// 인증 헤더 생성 함수
+function getAuthHeaders() {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
+
 // API 호출 함수들
 async function fetchRestaurants(filters = {}) {
     try {
@@ -83,11 +115,19 @@ async function searchRestaurants(query) {
 
 async function addRestaurant(restaurantData) {
     try {
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('맛집 등록을 위해 로그인이 필요합니다.');
+            // 로그인 모달 표시
+            const loginModal = new bootstrap.Modal(document.getElementById('login-modal'));
+            loginModal.show();
+            return { success: false, error: '로그인이 필요합니다.' };
+        }
+
         const response = await fetch(`${API_URL}/restaurants`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(restaurantData)
         });
         
@@ -118,14 +158,22 @@ async function addRestaurant(restaurantData) {
 
 async function addReview(restaurantId, reviewData) {
     try {
-        const url = `${API_URL}/reviews`;
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('리뷰 작성을 위해 로그인이 필요합니다.');
+            // 로그인 모달 표시
+            const loginModal = new bootstrap.Modal(document.getElementById('login-modal'));
+            loginModal.show();
+            return null;
+        }
+
+        const url = `${API_URL}/restaurants/reviews`;
         console.log('API 호출 (POST):', url, { restaurantId, ...reviewData });
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 restaurantId,
                 ...reviewData
@@ -227,7 +275,7 @@ function initMap() {
     document.getElementById("write-review-btn").addEventListener("click", showReviewModal);
     
     // 리뷰 제출 버튼 이벤트 리스너
-    document.getElementById("submit-review-btn").addEventListener("click", submitReview);
+    document.getElementById("submit-review-btn").addEventListener('click', submitReview);
     
     // 별점 선택 이벤트 리스너 설정
     setupRatingStars();
@@ -851,6 +899,31 @@ function showRestaurantCard(restaurant) {
     const imageContainer = card.querySelector('.restaurant-image');
     imageContainer.innerHTML = `<img src="${restaurant.image}" alt="${restaurant.name}" class="img-fluid rounded">`;
     
+    // 삭제 버튼 관련 로직
+    const headerActions = card.querySelector('.card-header .d-flex');
+    
+    // 기존 삭제 버튼이 있다면 제거
+    const existingDeleteBtn = card.querySelector('#delete-restaurant-btn');
+    if (existingDeleteBtn) {
+        existingDeleteBtn.remove();
+    }
+    
+    // 로그인한 사용자이고, 이 레스토랑의 작성자이거나 관리자인 경우에만 삭제 버튼 표시
+    if (currentUser) {
+        // 레스토랑의 userId가 없거나(이전 데이터) 현재 사용자의 ID와 일치하거나 관리자인 경우
+        if (!restaurant.userId || restaurant.userId === currentUser.id || currentUser.role === 'admin') {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.id = 'delete-restaurant-btn';
+            deleteBtn.className = 'btn btn-sm btn-outline-danger me-2';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.title = '맛집 삭제';
+            deleteBtn.addEventListener('click', confirmDeleteRestaurant);
+            
+            // 평점 앞에 삭제 버튼 추가
+            headerActions.prepend(deleteBtn);
+        }
+    }
+    
     // 카드 표시
     card.classList.remove('d-none');
     card.classList.add('fade-in');
@@ -860,6 +933,25 @@ function showRestaurantCard(restaurant) {
     
     // 리뷰 로드
     loadReviews(restaurant.id);
+}
+
+// 레스토랑 삭제 확인
+function confirmDeleteRestaurant() {
+    if (confirm('정말로 이 맛집을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+        deleteRestaurant(currentRestaurantId)
+            .then(result => {
+                if (result.success) {
+                    alert('맛집이 삭제되었습니다.');
+                    hideRestaurantCard();
+                } else {
+                    alert(`삭제 실패: ${result.error}`);
+                }
+            })
+            .catch(err => {
+                console.error('삭제 중 오류 발생:', err);
+                alert('맛집 삭제 중 오류가 발생했습니다.');
+            });
+    }
 }
 
 // 레스토랑 카드 숨기기 함수
@@ -1277,34 +1369,40 @@ function showSaveRestaurantForm(placeId) {
 async function submitNewRestaurant() {
     console.log('레스토랑 등록 시작');
     
-    // 필수 입력값 검증 (ID를 올바르게 수정)
+    // 필수 입력값 검증
     const name = document.getElementById('restaurant-name').value;
     const category = document.getElementById('restaurant-category').value;
     const city = document.getElementById('restaurant-city').value;
     const lat = document.getElementById('restaurant-lat').value;
     const lng = document.getElementById('restaurant-lng').value;
-    const address = document.getElementById('restaurant-address').value; // 주소 필드 추가
+    const address = document.getElementById('restaurant-address').value;
     
     if (!name || !category || !city || !lat || !lng || !address) {
-        // 에러 메시지를 표시할 요소가 없으면 alert으로 대체
         alert('필수 정보를 모두 입력해주세요.');
         return;
     }
     
-    // 레스토랑 데이터 생성
-    const restaurantData = {
-        name: name,
-        category: category,
-        city: city,
-        lat: parseFloat(lat),
-        lng: parseFloat(lng),
-        address: address // 주소 필드 포함
-    };
+    // FormData 객체 생성 (파일 업로드를 위해)
+    const formData = new FormData();
     
-    // 선택적 필드: 장소 ID (Google Places API)
+    // 텍스트 필드 추가
+    formData.append('name', name);
+    formData.append('category', category);
+    formData.append('city', city);
+    formData.append('lat', lat);
+    formData.append('lng', lng);
+    formData.append('address', address);
+    
+    // 이미지 파일 추가 (있는 경우)
+    const imageFile = document.getElementById('restaurant-image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    
+    // 선택적 필드: 장소 ID
     const placeId = document.getElementById('restaurant-place-id');
     if (placeId && placeId.value) {
-        restaurantData.placeId = placeId.value;
+        formData.append('placeId', placeId.value);
     }
     
     // 화면에 로딩 표시
@@ -1315,58 +1413,98 @@ async function submitNewRestaurant() {
     }
     
     try {
-        // API 호출
-        const result = await addRestaurant(restaurantData);
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('맛집 등록을 위해 로그인이 필요합니다.');
+            // 로그인 모달 표시
+            const loginModal = new bootstrap.Modal(document.getElementById('login-modal'));
+            loginModal.show();
+            return { success: false, error: '로그인이 필요합니다.' };
+        }
+        
+        // API 호출 (FormData 사용)
+        const response = await fetch(`${API_URL}/restaurants`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+                // Content-Type은 FormData에서 자동으로 설정됨
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
         
         // 결과 처리
         if (result.success) {
-            // 성공 시 팝업 닫고 목록 갱신
-            console.log('레스토랑 등록 완료');
+            console.log('레스토랑 등록 성공:', result.data);
             
-            // Bootstrap 5 방식으로 모달 닫기
-            const modal = bootstrap.Modal.getInstance(document.getElementById('add-restaurant-modal'));
-            if (modal) modal.hide();
-            
-            restaurants.push(result.data);
-            addRestaurantMarkers();
-            
-            // 등록된 레스토랑으로 지도 이동
-            map.setCenter({lat: result.data.lat, lng: result.data.lng});
-            map.setZoom(15);
-            
-            // 상세 정보 보여주기
-            showRestaurantCard(result.data);
-        } else {
-            // 중복 레스토랑 처리
-            if (result.duplicateId) {
-                const confirmMove = confirm(`${result.error} 해당 레스토랑으로 이동하시겠습니까?`);
-                if (confirmMove) {
-                    // 중복된 레스토랑 상세 페이지로 이동
-                    const duplicateRestaurant = await fetchRestaurantById(result.duplicateId);
-                    if (duplicateRestaurant) {
-                        map.setCenter({lat: duplicateRestaurant.lat, lng: duplicateRestaurant.lng});
-                        map.setZoom(15);
-                        showRestaurantCard(duplicateRestaurant);
-                        
-                        // Bootstrap 5 방식으로 모달 닫기
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('add-restaurant-modal'));
-                        if (modal) modal.hide();
-                    }
-                }
-            } else {
-                // 일반 오류 표시
-                alert(result.error || '레스토랑 등록 중 오류가 발생했습니다.');
+            // 새로 등록된 레스토랑 데이터 추가
+            if (result.data) {
+                // 레스토랑 목록에 추가
+                restaurants.push(result.data);
+                
+                // 마커 추가
+                addRestaurantMarkers();
+                
+                // 레스토랑 목록 업데이트
+                updateRestaurantList();
+                
+                // 새 레스토랑 위치로 지도 이동
+                map.setCenter({ lat: parseFloat(lat), lng: parseFloat(lng) });
+                map.setZoom(15);
+                
+                // 레스토랑 카드 표시
+                showRestaurantCard(result.data);
             }
+            
+            // 모달 닫기
+            const modal = bootstrap.Modal.getInstance(document.getElementById('add-restaurant-modal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // 성공 알림 표시
+            alert('맛집이 성공적으로 등록되었습니다!');
+            
+            return { success: true, data: result.data };
+        } else {
+            console.error('레스토랑 등록 실패:', result.error);
+            
+            // 실패 알림 표시
+            alert(`맛집 등록에 실패했습니다: ${result.error || '알 수 없는 오류'}`);
+            
+            // 중복 장소 처리
+            if (result.duplicateId) {
+                alert('이미 등록된 장소입니다. 기존 정보를 확인합니다.');
+                
+                // 중복된 레스토랑 정보 조회 및 표시
+                const duplicateRestaurant = await fetchRestaurantById(result.duplicateId);
+                if (duplicateRestaurant) {
+                    showRestaurantCard(duplicateRestaurant);
+                    map.setCenter({ lat: duplicateRestaurant.lat, lng: duplicateRestaurant.lng });
+                    map.setZoom(15);
+                }
+                
+                // 모달 닫기
+                const modal = bootstrap.Modal.getInstance(document.getElementById('add-restaurant-modal'));
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            
+            return { success: false, error: result.error };
         }
     } catch (error) {
-        console.error('레스토랑 등록 중 오류 발생:', error);
-        alert('레스토랑 등록 중 오류가 발생했습니다.');
+        console.error('레스토랑 등록 API 호출 오류:', error);
+        alert('맛집 등록 중 오류가 발생했습니다. 나중에 다시 시도해주세요.');
+        return { success: false, error: '서버 연결 오류가 발생했습니다.' };
     } finally {
         // 버튼 상태 복원
-        const submitBtn = document.querySelector('#add-restaurant-modal .modal-footer .btn-primary');
         if (submitBtn) {
             submitBtn.textContent = '등록하기';
             submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus-circle me-1"></i> 등록하기';
         }
     }
 }
@@ -1611,38 +1749,210 @@ function saveGooglePlace(placeId) {
     });
 }
 
+// 사용자 인증 확인 및 UI 업데이트
+async function checkAuth() {
+    const token = getToken();
+    
+    if (!token) {
+        updateUIForLoggedOut();
+        return false;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentUser = data.data;
+            updateUIForLoggedIn();
+            return true;
+        } else {
+            removeToken();
+            updateUIForLoggedOut();
+            return false;
+        }
+    } catch (error) {
+        console.error('인증 확인 중 오류 발생:', error);
+        removeToken();
+        updateUIForLoggedOut();
+        return false;
+    }
+}
+
+// 로그인 상태 UI 업데이트
+function updateUIForLoggedIn() {
+    const authButtons = document.querySelector('.auth-buttons');
+    if (authButtons) {
+        authButtons.innerHTML = `
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user me-1 d-none d-md-inline-block"></i>${currentUser.username}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>프로필</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-heart me-2"></i>찜한 맛집</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" id="logout-button"><i class="fas fa-sign-out-alt me-2"></i>로그아웃</a></li>
+                </ul>
+            </div>
+        `;
+        
+        // 로그아웃 버튼 이벤트 리스너
+        document.getElementById('logout-button')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    }
+}
+
+// 로그아웃 상태 UI 업데이트
+function updateUIForLoggedOut() {
+    const authButtons = document.querySelector('.auth-buttons');
+    if (authButtons) {
+        authButtons.innerHTML = `
+            <button class="btn btn-outline-secondary btn-sm" id="login-button" data-bs-toggle="modal" data-bs-target="#login-modal">
+                <i class="fas fa-sign-in-alt me-1 d-none d-md-inline-block"></i>로그인
+            </button>
+            <button class="btn btn-secondary btn-sm" id="register-button" data-bs-toggle="modal" data-bs-target="#register-modal">
+                <i class="fas fa-user-plus me-1 d-none d-md-inline-block"></i>회원가입
+            </button>
+        `;
+    }
+}
+
+// 로그아웃 처리
+function logout() {
+    removeToken();
+    currentUser = null;
+    updateUIForLoggedOut();
+    alert('로그아웃되었습니다.');
+}
+
+// 로그인 처리
+async function login(account, password, rememberMe) {
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ account, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 토큰 저장
+            setToken(data.data.token);
+            currentUser = data.data;
+            
+            // UI 업데이트
+            updateUIForLoggedIn();
+            
+            // 모달 닫기
+            const loginModal = bootstrap.Modal.getInstance(document.getElementById('login-modal'));
+            if (loginModal) loginModal.hide();
+            
+            // 폼 초기화
+            document.getElementById('login-form').reset();
+            
+            // 성공 메시지
+            alert('로그인되었습니다.');
+            return true;
+        } else {
+            alert(data.error || '로그인에 실패했습니다.');
+            return false;
+        }
+    } catch (error) {
+        console.error('로그인 중 오류 발생:', error);
+        alert('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+        return false;
+    }
+}
+
+// 회원가입 처리
+async function register(account, username, password) {
+    try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ account, username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 토큰 저장
+            setToken(data.data.token);
+            currentUser = data.data;
+            
+            // UI 업데이트
+            updateUIForLoggedIn();
+            
+            // 모달 닫기
+            const registerModal = bootstrap.Modal.getInstance(document.getElementById('register-modal'));
+            if (registerModal) registerModal.hide();
+            
+            // 폼 초기화
+            document.getElementById('register-form').reset();
+            
+            // 성공 메시지
+            alert('회원가입이 완료되었습니다.');
+            return true;
+        } else {
+            alert(data.error || '회원가입에 실패했습니다.');
+            return false;
+        }
+    } catch (error) {
+        console.error('회원가입 중 오류 발생:', error);
+        alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+        return false;
+    }
+}
+
 // 로그인 및 회원가입 관련 코드
 document.addEventListener('DOMContentLoaded', function() {
     // 모달 간 전환
     document.getElementById('show-register')?.addEventListener('click', function(e) {
         e.preventDefault();
-        $('#login-modal').modal('hide');
-        $('#register-modal').modal('show');
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById('login-modal'));
+        if (loginModal) loginModal.hide();
+        
+        const registerModal = new bootstrap.Modal(document.getElementById('register-modal'));
+        registerModal.show();
     });
     
     document.getElementById('show-login')?.addEventListener('click', function(e) {
         e.preventDefault();
-        $('#register-modal').modal('hide');
-        $('#login-modal').modal('show');
+        const registerModal = bootstrap.Modal.getInstance(document.getElementById('register-modal'));
+        if (registerModal) registerModal.hide();
+        
+        const loginModal = new bootstrap.Modal(document.getElementById('login-modal'));
+        loginModal.show();
     });
     
     // 로그인 폼 제출
     document.getElementById('login-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        const userid = document.getElementById('login-userid').value;
+        const account = document.getElementById('login-account').value;
         const password = document.getElementById('login-password').value;
         const rememberMe = document.getElementById('remember-me').checked;
         
-        // 여기에 로그인 처리 로직 추가
-        console.log('로그인 시도:', { userid, password, rememberMe });
-        // 실제로는 서버에 인증 요청을 보내야 함
+        login(account, password, rememberMe);
     });
     
     // 회원가입 폼 제출
     document.getElementById('register-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        const userid = document.getElementById('register-userid').value;
-        const nickname = document.getElementById('register-nickname').value;
+        const account = document.getElementById('register-account').value;
+        const username = document.getElementById('register-username').value;
         const password = document.getElementById('register-password').value;
         const passwordConfirm = document.getElementById('register-password-confirm').value;
         
@@ -1652,11 +1962,53 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // 여기에 회원가입 처리 로직 추가
-        console.log('회원가입 시도:', { userid, nickname, password });
-        // 실제로는 서버에 가입 요청을 보내야 함
+        register(account, username, password);
     });
+    
+    // 페이지 로드 시 인증 상태 확인
+    checkAuth();
 });
 
 // 페이지 로드 시 Google Maps API가 로드된 후 initMap 함수가 호출됩니다.
 // Google Maps API 스크립트에 async와 defer 속성이 있으므로 이 파일은 별도의 window.onload 처리가 필요 없습니다. 
+
+// 레스토랑 삭제 함수
+async function deleteRestaurant(restaurantId) {
+    try {
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('맛집 삭제를 위해 로그인이 필요합니다.');
+            return { success: false, error: '로그인이 필요합니다.' };
+        }
+
+        const response = await fetch(`${API_URL}/restaurants/${restaurantId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('레스토랑 삭제 성공');
+            
+            // 로컬 데이터에서도 삭제
+            restaurants = restaurants.filter(r => r._id !== restaurantId && r.id !== restaurantId);
+            
+            // 마커 제거 및 지도 업데이트
+            clearMarkers();
+            addRestaurantMarkers();
+            
+            // 목록 업데이트
+            updateRestaurantList();
+            
+            return { success: true };
+        } else {
+            console.error('레스토랑 삭제 실패:', result.error);
+            return { success: false, error: result.error };
+        }
+    } catch (error) {
+        console.error('레스토랑 삭제 API 호출 오류:', error);
+        return { success: false, error: '서버 연결 오류가 발생했습니다.' };
+    }
+} 

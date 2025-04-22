@@ -18,6 +18,10 @@ app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // 라우트 설정
 app.use('/api/restaurants', require('./routes/restaurants'));
+// 인증 라우트 추가
+app.use('/api/auth', require('./routes/auth'));
+// 리뷰 라우트 추가
+app.use('/api/reviews', require('./routes/reviews'));
 
 // 정적 파일 제공 설정
 if (process.env.NODE_ENV === 'production') {

@@ -1,78 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-
-// Restaurant 스키마 정의
-const RestaurantSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  category: {
-    type: String,
-    required: true,
-    enum: ['한식', '일식', '중식', '양식', '카페', '기타'],
-    default: '기타'
-  },
-  address: {
-    type: String,
-    required: true
-  },
-  city: {
-    type: String,
-    required: true
-  },
-  lat: {
-    type: Number,
-    required: true
-  },
-  lng: {
-    type: Number,
-    required: true
-  },
-  placeId: {
-    type: String
-  },
-  rating: {
-    type: Number,
-    default: 0
-  },
-  image: {
-    type: String,
-    default: "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?q=80&w=1470&auto=format&fit=crop"
-  },
-  reviews: [
-    {
-      rating: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 5
-      },
-      text: {
-        type: String,
-        required: true
-      },
-      menu: String,
-      price: Number,
-      imageUrl: String,
-      date: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-// 검색을 위한 인덱스 설정
-RestaurantSchema.index({ name: 'text', category: 'text', address: 'text' });
-
-const Restaurant = mongoose.model('Restaurant', RestaurantSchema);
+const Restaurant = require('../models/Restaurant');
+const { protect, authorize, checkRestaurantOwnership } = require('../middleware/auth');
+const { uploadImage } = require('../config/cloudinary');
 
 // 모든 레스토랑 조회
 router.get('/', async (req, res) => {
@@ -150,7 +80,9 @@ router.get('/search/:query', async (req, res) => {
 // 특정 레스토랑 상세 조회
 router.get('/:id', async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id).lean();
+    const restaurant = await Restaurant.findById(req.params.id)
+      .populate('userId', 'username') // 작성자 정보 가져오기
+      .lean();
     
     if (!restaurant) {
       return res.status(404).json({
@@ -183,10 +115,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// 새 레스토랑 등록
-router.post('/', async (req, res) => {
+// 새 레스토랑 등록 (로그인 필수)
+router.post('/', protect, uploadImage.single('image'), async (req, res) => {
   try {
-    const { name, category, address, city, lat, lng, placeId, image } = req.body;
+    // req.body에서 필요한 데이터 추출
+    const { name, category, address, city, lat, lng, placeId } = req.body;
 
     // 필수 필드 검증
     if (!name || !category || !city || !lat || !lng) {
@@ -222,7 +155,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 새 레스토랑 생성
+    // 새 레스토랑 생성 - 이미지 URL 포함
     const newRestaurant = new Restaurant({
       name,
       category,
@@ -231,7 +164,9 @@ router.post('/', async (req, res) => {
       lat,
       lng,
       placeId,
-      image: image || undefined
+      // Cloudinary에서 제공한 URL 사용
+      image: req.file ? req.file.path : undefined,
+      userId: req.user._id
     });
 
     await newRestaurant.save();
@@ -252,8 +187,89 @@ router.post('/', async (req, res) => {
   }
 });
 
+// 레스토랑 업데이트 (소유자 또는 관리자만 가능)
+router.put('/:id', protect, checkRestaurantOwnership, async (req, res) => {
+  try {
+    const { name, category, address, city, phone, hours, image } = req.body;
+
+    // 업데이트할 필드 모음
+    const updateFields = {};
+    if (name) updateFields.name = name;
+    if (category) updateFields.category = category;
+    if (address) updateFields.address = address;
+    if (city) updateFields.city = city;
+    if (phone) updateFields.phone = phone;
+    if (hours) updateFields.hours = hours;
+    if (image) updateFields.image = image;
+    
+    // 업데이트 시간 갱신
+    updateFields.updatedAt = Date.now();
+
+    // 레스토랑 업데이트
+    const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updatedRestaurant) {
+      return res.status(404).json({
+        success: false,
+        error: '해당 레스토랑을 찾을 수 없습니다.'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...updatedRestaurant,
+        id: updatedRestaurant._id
+      }
+    });
+  } catch (error) {
+    console.error('레스토랑 업데이트 오류:', error);
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: Object.values(error.errors).map(val => val.message)[0]
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 레스토랑 삭제 (소유자 또는 관리자만 가능)
+router.delete('/:id', protect, checkRestaurantOwnership, async (req, res) => {
+  try {
+    const deletedRestaurant = await Restaurant.findByIdAndDelete(req.params.id);
+    
+    if (!deletedRestaurant) {
+      return res.status(404).json({
+        success: false,
+        error: '해당 레스토랑을 찾을 수 없습니다.'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    console.error('레스토랑 삭제 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '서버 오류가 발생했습니다.'
+    });
+  }
+});
+
 // 리뷰 등록
-router.post('/reviews', async (req, res) => {
+router.post('/reviews', protect, async (req, res) => {
   try {
     const { restaurantId, rating, text, menu, price, imageUrl } = req.body;
 
@@ -275,14 +291,15 @@ router.post('/reviews', async (req, res) => {
       });
     }
 
-    // 리뷰 데이터 생성
+    // 리뷰 데이터 생성 (userId 추가)
     const newReview = {
       rating,
       text,
       menu: menu || '',
       price: price || 0,
       imageUrl: imageUrl || '',
-      date: Date.now()
+      date: Date.now(),
+      userId: req.user._id.toString() // 현재 로그인한 사용자 ID 추가
     };
 
     // 리뷰 추가

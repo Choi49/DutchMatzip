@@ -86,6 +86,11 @@ const RestaurantSchema = new mongoose.Schema({
     max: 5
   },
   reviews: [ReviewSchema],
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

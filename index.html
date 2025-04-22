@@ -308,6 +308,12 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <div class="mb-3">
+                            <label for="restaurant-image" class="form-label">식당 이미지 (선택사항)</label>
+                            <input class="form-control" type="file" id="restaurant-image" accept="image/*">
+                            <div class="form-text">대표 이미지를 업로드하면 맛집 정보에 표시됩니다.</div>
+                        </div>
                     </form>
                     
                     <div class="alert alert-info mt-3">
@@ -335,8 +341,8 @@
                 <div class="modal-body">
                     <form id="login-form">
                         <div class="mb-3">
-                            <label for="login-userid" class="form-label">아이디</label>
-                            <input type="text" class="form-control" id="login-userid" required>
+                            <label for="login-account" class="form-label">계정</label>
+                            <input type="text" class="form-control" id="login-account" required>
                         </div>
                         <div class="mb-3">
                             <label for="login-password" class="form-label">비밀번호</label>
@@ -354,7 +360,7 @@
                 </div>
                 <div class="modal-footer justify-content-center">
                     <p class="small mb-0">계정이 없으신가요? 
-                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#register-modal" data-bs-dismiss="modal">회원가입</a>
+                        <a href="#" class="text-decoration-none" id="show-register">회원가입</a>
                     </p>
                 </div>
             </div>
@@ -374,24 +380,24 @@
                     <div class="alert alert-info mb-3" role="alert">
                         <i class="fas fa-shield-alt me-2"></i>
                         <strong>안심하고 이용하세요!</strong> 저희는 어떠한 개인정보도 수집하지 않습니다.
-                        아이디와 닉네임만으로 서비스를 이용하실 수 있습니다.
+                        계정과 닉네임만으로 서비스를 이용하실 수 있습니다.
                     </div>
                     
                     <form id="register-form">
                         <div class="mb-3">
-                            <label for="register-userid" class="form-label">아이디</label>
-                            <input type="text" class="form-control" id="register-userid" required>
+                            <label for="register-account" class="form-label">계정</label>
+                            <input type="text" class="form-control" id="register-account" required>
                             <div class="form-text">영문, 숫자 조합 4-12자</div>
                         </div>
                         <div class="mb-3">
-                            <label for="register-nickname" class="form-label">닉네임</label>
-                            <input type="text" class="form-control" id="register-nickname" required>
+                            <label for="register-username" class="form-label">닉네임</label>
+                            <input type="text" class="form-control" id="register-username" required>
                             <div class="form-text">다른 사용자에게 표시되는 이름입니다</div>
                         </div>
                         <div class="mb-3">
                             <label for="register-password" class="form-label">비밀번호</label>
                             <input type="password" class="form-control" id="register-password" required>
-                            <div class="form-text">8자 이상의 영문, 숫자, 특수문자 조합</div>
+                            <div class="form-text">6자 이상의 영문, 숫자 조합</div>
                         </div>
                         <div class="mb-3">
                             <label for="register-password-confirm" class="form-label">비밀번호 확인</label>
@@ -402,7 +408,7 @@
                 </div>
                 <div class="modal-footer justify-content-center">
                     <p class="small mb-0">이미 계정이 있으신가요? 
-                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#login-modal" data-bs-dismiss="modal">로그인</a>
+                        <a href="#" class="text-decoration-none" id="show-login">로그인</a>
                     </p>
                 </div>
             </div>
