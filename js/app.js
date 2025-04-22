@@ -613,15 +613,17 @@ function updateSidebarWithPlacesResults(places) {
     // 저장된 맛집 중 표시 가능한 것을 먼저 가져옴
     const visibleRestaurants = markers.filter(m => m.marker.getVisible());
     
-    // 기존 식당 목록을 업데이트하여 표시
-    updateRestaurantList();
+    // 모든 항목 제거 (저장된 식당 및 구글 검색 결과)
+    while (listContainer.firstChild) {
+        if (listContainer.firstChild !== noRestaurantsMsg) {
+            listContainer.removeChild(listContainer.firstChild);
+        } else {
+            break;
+        }
+    }
     
-    // 데스크탑 뷰: 기존 검색 결과 섹션 제거 (구분선, 제목, 결과 항목들)
-    const existingGoogleResults = Array.from(listContainer.querySelectorAll('.google-place-item, .dropdown-divider, h6.text-muted'));
-    existingGoogleResults.forEach(item => listContainer.removeChild(item));
-    
-    // 모바일 뷰: 기존 검색 결과 제거
-    Array.from(mobileListContainer.querySelectorAll('.google-place-item, .list-group-item:not(#mobile-no-results-message)')).forEach(item => {
+    // 모바일 뷰: 기존 항목들 제거 (저장된 식당 및 구글 검색 결과)
+    Array.from(mobileListContainer.querySelectorAll('.list-group-item:not(#mobile-no-results-message)')).forEach(item => {
         mobileListContainer.removeChild(item);
     });
     
@@ -639,16 +641,54 @@ function updateSidebarWithPlacesResults(places) {
     noRestaurantsMsg.style.display = 'none';
     mobileNoResultsMsg.style.display = 'none';
     
-    // 모바일 뷰에서는 먼저 저장된 맛집을 목록에 추가
+    // 저장된 맛집 표시 - 검색 결과가 있는 경우에만
     if (visibleRestaurants.length > 0) {
-        // 저장된 맛집 리스트 표시
+        // 데스크톱 뷰: 저장된 맛집 항목 추가
         visibleRestaurants.forEach(markerObj => {
             const restaurant = markerObj.restaurant;
             
-            const item = createMobileRestaurantItem(restaurant, false);
+            // 데스크톱 식당 항목 생성
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center';
+            item.dataset.id = restaurant._id || restaurant.id;
             
-            // 클릭 이벤트 추가
+            const categoryStyle = getCategoryStyle(restaurant.category);
+            const cityName = restaurant.city ? getCityNameInKorean(restaurant.city) : '기타';
+            
+            item.innerHTML = `
+                <div class="me-2">
+                    <i class="fas fa-circle" style="color: ${categoryStyle.color}; font-size: 0.7rem;"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-bold">${restaurant.name}</div>
+                    <div class="small text-muted">${cityName}</div>
+                </div>
+                <div class="text-warning small">
+                    <i class="fas fa-star"></i> ${restaurant.rating.toFixed(1)}
+                </div>
+            `;
+            
+            // 데스크톱 클릭 이벤트
             item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // 지도 중심 이동
+                map.setCenter({ lat: restaurant.lat, lng: restaurant.lng });
+                map.setZoom(16);
+                
+                // 레스토랑 카드 표시
+                showRestaurantCard(restaurant);
+            });
+            
+            // 데스크톱 목록에 추가
+            // listContainer.appendChild(item);
+            
+            // 모바일 항목 생성
+            const mobileItem = createMobileRestaurantItem(restaurant, false);
+            
+            // 모바일 클릭 이벤트
+            mobileItem.addEventListener('click', (e) => {
                 e.preventDefault();
                 
                 // 지도 중심 이동
@@ -662,34 +702,38 @@ function updateSidebarWithPlacesResults(places) {
                 mobileContainer.classList.remove('show');
             });
             
-            // 목록에 추가
-            mobileListContainer.appendChild(item);
+            // 모바일 목록에 추가
+            mobileListContainer.appendChild(mobileItem);
         });
     }
     
     // 구글 검색 결과 항목 추가
     if (places && places.length > 0) {
-        // 데스크톱 뷰: 구글 검색 결과 섹션 구분선 추가 (저장된 맛집이 있는 경우에만)
+        // 저장된 맛집이 있고 검색 결과가 있는 경우 구분선 추가
         if (visibleRestaurants.length > 0) {
             const divider = document.createElement('div');
             divider.className = 'dropdown-divider my-3';
             listContainer.appendChild(divider);
-            
-            const heading = document.createElement('h6');
-            heading.className = 'text-muted px-3 py-1';
-            heading.textContent = '구글 검색 결과';
-            listContainer.appendChild(heading);
-            
-            // 모바일 뷰에도 구분선 추가
+        }
+        
+        // 구글 검색 결과 제목 항상 추가
+        const heading = document.createElement('h6');
+        heading.className = 'text-muted px-3 py-1';
+        heading.textContent = '구글 검색 결과';
+        listContainer.appendChild(heading);
+        
+        // 모바일 뷰에도 구분선 추가 (저장된 맛집이 있는 경우에만)
+        if (visibleRestaurants.length > 0) {
             const mobileDivider = document.createElement('div');
             mobileDivider.className = 'dropdown-divider my-3';
             mobileListContainer.appendChild(mobileDivider);
-            
-            const mobileHeading = document.createElement('h6');
-            mobileHeading.className = 'text-muted px-3 py-1';
-            mobileHeading.textContent = '구글 검색 결과';
-            mobileListContainer.appendChild(mobileHeading);
         }
+        
+        // 모바일 구글 검색 결과 제목 항상 추가
+        const mobileHeading = document.createElement('h6');
+        mobileHeading.className = 'text-muted px-3 py-1';
+        mobileHeading.textContent = '구글 검색 결과';
+        mobileListContainer.appendChild(mobileHeading);
         
         // 검색 결과 목록 추가
         places.forEach(place => {
@@ -2318,6 +2362,7 @@ function resizeMap() {
 
 // 레스토랑 리스트 업데이트
 function updateRestaurantList() {
+    console.log("updateRestaurantList 호출");
     // 데스크톱 요소
     const container = document.querySelector('.restaurant-items');
     const noRestaurantsMsg = document.getElementById('no-restaurants-message');
@@ -2334,7 +2379,7 @@ function updateRestaurantList() {
     // 모바일 목록도 초기화
     const existingMobileItems = Array.from(mobileContainer.children).filter(child => child !== mobileNoResultsMsg);
     existingMobileItems.forEach(item => mobileContainer.removeChild(item));
-    
+    console.log("restaurants: ", restaurants);
     // 레스토랑이 없는 경우 메시지 표시
     if (restaurants.length === 0) {
         noRestaurantsMsg.style.display = 'block';
@@ -2354,6 +2399,7 @@ function updateRestaurantList() {
     
     // 레스토랑 항목 추가
     restaurants.forEach(restaurant => {
+        console.log("restaurant for Each: ", restaurant);
         // 중복 검사: 이름과 주소를 기준으로 
         const restaurantKey = `${restaurant.name}-${restaurant.address}`;
         if (addedRestaurants.has(restaurantKey)) {
@@ -2967,6 +3013,7 @@ const CITY_COORDINATES = {
 
 // 필터링된 레스토랑 가져오기
 async function filterRestaurants() {
+    console.log("filterRestaurants 호출");
     const selectedCategories = getSelectedCategories();
     const selectedCity = document.getElementById("city-select").value;
     
@@ -2995,7 +3042,7 @@ async function filterRestaurants() {
     
     // 전역 restaurants 변수를 새로운 결과로 완전히 대체
     restaurants = filteredRestaurants;
-    
+    console.log("filteredRestaurants : ", restaurants);
     // 마커 및 목록 업데이트
     addRestaurantMarkers();
     
@@ -3073,7 +3120,9 @@ function setupSearch() {
     const searchInput = document.getElementById('search-input');
     
     searchButton.addEventListener('click', () => {
+        console.log("searchButton 클릭");
         performSearch(searchInput.value);
+        console.log("searchButton 클릭 종료");
     });
     
     searchInput.addEventListener('keypress', (e) => {
@@ -3086,6 +3135,8 @@ function setupSearch() {
 // 검색 실행 함수
 async function performSearch(query) {
     // 검색어가 비어 있는 경우, 현재 필터링된 데이터로 목록을 복원
+    console.log("performSearch 호출");
+
     if (!query.trim()) {
         // 구글 검색 마커들 제거
         clearPlacesMarkers();
@@ -3109,14 +3160,13 @@ async function performSearch(query) {
     try {
         // 1. 서버 API를 통한 레스토랑 검색
         const searchResults = await searchRestaurants(query);
-        
+        restaurants = searchResults;
+
         // 서버 검색 결과로 맛집 목록 업데이트
         if (searchResults.length > 0) {
-            restaurants = searchResults;
-            
             // 마커와 목록 업데이트
             addRestaurantMarkers();
-            updateRestaurantList();
+            // updateRestaurantList(); // 중복 호출 제거
             
             // 지도 뷰 조정
             fitMapToMarkers();
