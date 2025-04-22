@@ -41,8 +41,8 @@ router.post('/', protect, async (req, res) => {
       price: price || 0,
       imageUrl: imageUrl || '',
       date: Date.now(),
-      userId: new mongoose.Types.ObjectId(req.user._id), // ObjectId 타입으로 저장
-      username: req.user.username // 사용자 이름도 함께 저장
+      userId: req.user._id, // ObjectId로 저장
+      username: req.user.username // 백업용으로 username도 저장
     };
     console.log(newReview);
     restaurant.reviews.unshift(newReview);
@@ -75,7 +75,11 @@ router.post('/', protect, async (req, res) => {
  */
 router.get('/:restaurantId', async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.restaurantId);
+    const restaurant = await Restaurant.findById(req.params.restaurantId)
+      .populate({
+        path: 'reviews.userId',
+        select: 'username'
+      });
     
     if (!restaurant) {
       return res.status(404).json({
@@ -134,8 +138,8 @@ router.post('/reviews', protect, uploadImage.single('reviewImage'), async (req, 
       price: parseFloat(price) || 0,
       imageUrl: req.file ? req.file.path : '',
       date: Date.now(),
-      userId: new mongoose.Types.ObjectId(req.user._id), // ObjectId 타입으로 저장
-      username: req.user.username // 사용자 이름도 함께 저장
+      userId: req.user._id, // ObjectId로 저장
+      username: req.user.username // 백업용으로 username도 저장
     };
     
     restaurant.reviews.unshift(newReview);

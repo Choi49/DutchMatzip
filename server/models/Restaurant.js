@@ -34,6 +34,11 @@ const ReviewSchema = new mongoose.Schema({
     default: Date.now
   },
   userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  username: {
     type: String,
     default: '익명'
   }

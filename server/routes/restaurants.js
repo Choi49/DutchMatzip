@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
     }
 
     const restaurants = await Restaurant.find(filter)
+      .populate('reviews.userId', 'username') // 리뷰 작성자 정보 가져오기
       .sort(sortOptions)
       .lean();
 
@@ -58,7 +59,9 @@ router.get('/search/:query', async (req, res) => {
         { category: { $regex: query, $options: 'i' } },
         { address: { $regex: query, $options: 'i' } }
       ]
-    }).lean();
+    })
+    .populate('reviews.userId', 'username') // 리뷰 작성자 정보 가져오기
+    .lean();
 
     res.json({
       success: true,
@@ -81,7 +84,8 @@ router.get('/search/:query', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id)
-      .populate('userId', 'username') // 작성자 정보 가져오기
+      .populate('userId', 'username') // 레스토랑 작성자 정보 가져오기
+      .populate('reviews.userId', 'username') // 리뷰 작성자 정보 가져오기
       .lean();
     
     if (!restaurant) {

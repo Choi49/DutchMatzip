@@ -1300,24 +1300,39 @@ function createReviewElement(review) {
         }
     }
     
-    // 리뷰 작성자 표시 (본인 리뷰인 경우 '내 리뷰'로 표시)
-    let authorDisplay = review.username || '사용자';
+    // 리뷰 작성자 표시
+    // userId가 객체인 경우 (populate된 경우)
+    let authorDisplay = '사용자';
+    if (review.userId && typeof review.userId === 'object' && review.userId.username) {
+        authorDisplay = review.userId.username;
+    } else if (review.username) {
+        // fallback: 직접 저장된 username 사용
+        authorDisplay = review.username;
+    }
+    
     let isOwner = false;
     let isAdmin = false;
+    
     // 현재 로그인한 사용자인지 확인
     if (currentUser && currentUser.id) {
         isAdmin = currentUser.role === 'admin';
         
         // userId 비교 - 모두 문자열로 변환하여 비교
         const currentUserId = currentUser.id.toString();
-        const reviewUserId = typeof review.userId === 'string' ? review.userId : review.userId.toString();
+        let reviewUserId;
         
+        if (review.userId && typeof review.userId === 'object' && review.userId._id) {
+            reviewUserId = review.userId._id.toString();
+        } else if (review.userId) {
+            reviewUserId = review.userId.toString();
+        }
         
         if (reviewUserId === currentUserId) {
             authorDisplay = `내 리뷰 (${currentUser.username})`;
             isOwner = true;
         }
     }
+    
     // 수정/삭제 버튼 (본인 리뷰 또는 관리자만 표시)
     let actionButtons = '';
     if (isOwner || isAdmin) {
