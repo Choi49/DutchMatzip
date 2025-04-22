@@ -306,6 +306,7 @@ function initMap() {
         streetViewControl: false,
         fullscreenControl: true,
         zoomControl: true,
+        gestureHandling: "greedy", // 한 손가락으로 지도 이동 가능
         styles: mapStyle // 사용자 정의 스타일 적용
     });
     
@@ -818,7 +819,7 @@ function updateSidebarWithPlacesResults(places) {
             // 클릭 이벤트 추가 - 모바일
             mobileItem.addEventListener('click', (e) => {
                 e.preventDefault();
-                
+                console.log("mobileItem.addEventListener");
                 // 이전 정보창 닫기
                 if (currentInfoWindow) {
                     currentInfoWindow.close();
@@ -851,7 +852,7 @@ function updateSidebarWithPlacesResults(places) {
                 // 저장된 레스토랑 카드 닫기
                 hideRestaurantCard();
                 
-                // 모바일 결과 컨테이너 유지 (접기 코드 제거)
+                // 모바일 결과 컨테이너는 계속 표시된 상태로 유지 (사용자가 볼 수 있도록)
                 // mobileContainer.classList.remove('show');
             });
             
