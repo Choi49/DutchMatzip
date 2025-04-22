@@ -169,7 +169,7 @@ async function addReview(restaurantId, reviewData) {
             return null;
         }
 
-        const url = `${API_URL}/restaurants/reviews`;
+        const url = `${API_URL}/reviews`;
         console.log('API 호출 (POST):', url, { restaurantId, ...reviewData });
         
         const response = await fetch(url, {
@@ -329,6 +329,9 @@ function initMap() {
     
     // 리뷰 제출 버튼 이벤트 리스너
     document.getElementById("submit-review-btn").addEventListener('click', submitReview);
+    
+    // 리뷰 수정 제출 버튼 이벤트 리스너
+    document.getElementById("update-review-btn").addEventListener('click', submitEditReview);
     
     // 별점 선택 이벤트 리스너 설정
     setupRatingStars();
@@ -941,7 +944,6 @@ function showRestaurantCard(restaurant) {
         // 이전 리뷰 전체 삭제 (lastChild부터 지우기)
         while (reviewsContainer.lastChild && reviewsContainer.lastChild !== noReviewsMessage) {
             reviewsContainer.removeChild(reviewsContainer.lastChild);
-            console.log("remove from lastChild");
         }
         
         // 리뷰 없음 메시지 표시
@@ -1279,8 +1281,10 @@ function loadReviews(restaurantId) {
 
 // 리뷰 요소 생성 함수
 function createReviewElement(review) {
+    console.log("review", review);
     const reviewDiv = document.createElement('div');
     reviewDiv.className = 'card mb-3 review-card';
+    reviewDiv.dataset.reviewId = review._id;
     
     // 날짜 포맷팅
     const reviewDate = new Date(review.date);
@@ -1296,28 +1300,61 @@ function createReviewElement(review) {
         }
     }
     
+    // 리뷰 작성자 표시 (본인 리뷰인 경우 '내 리뷰'로 표시)
+    let authorDisplay = review.username || '사용자';
+    let isOwner = false;
+    let isAdmin = false;
+    // 현재 로그인한 사용자인지 확인
+    if (currentUser && currentUser.id) {
+        isAdmin = currentUser.role === 'admin';
+        
+        // userId 비교 - 모두 문자열로 변환하여 비교
+        const currentUserId = currentUser.id.toString();
+        const reviewUserId = typeof review.userId === 'string' ? review.userId : review.userId.toString();
+        
+        
+        if (reviewUserId === currentUserId) {
+            authorDisplay = `내 리뷰 (${currentUser.username})`;
+            isOwner = true;
+        }
+    }
+    // 수정/삭제 버튼 (본인 리뷰 또는 관리자만 표시)
+    let actionButtons = '';
+    if (isOwner || isAdmin) {
+        actionButtons = `
+            <div class="review-actions mt-2">
+                <button class="btn btn-sm btn-outline-primary edit-review-btn" data-review-id="${review._id}">
+                    <i class="fas fa-edit"></i> 수정
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1 delete-review-btn" data-review-id="${review._id}">
+                    <i class="fas fa-trash-alt"></i> 삭제
+                </button>
+            </div>
+        `;
+    }
+    
     // 리뷰 내용 HTML 생성
     let reviewContent = `
         <div class="card-body">
             <div class="d-flex justify-content-between mb-2">
-                <h6 class="mb-0">사용자</h6>
+                <h6 class="mb-0">${authorDisplay}</h6>
                 <div>
                     ${starsHtml}
                     <span class="text-muted ms-2">${review.rating.toFixed(1)}</span>
                 </div>
             </div>
             <p class="text-muted small mb-2">${formattedDate}</p>
-            <p>${review.text}</p>
+            <p class="review-text">${review.text}</p>
     `;
     
     // 추천 메뉴가 있으면 추가
     if (review.menu) {
-        reviewContent += `<p class="small text-success"><i class="fas fa-utensils me-1"></i> 추천 메뉴: ${review.menu}</p>`;
+        reviewContent += `<p class="small text-success review-menu"><i class="fas fa-utensils me-1"></i> 추천 메뉴: ${review.menu}</p>`;
     }
     
     // 가격이 있으면 추가
     if (review.price) {
-        reviewContent += `<p class="small text-primary"><i class="fas fa-euro-sign me-1"></i> 가격: €${review.price.toFixed(2)}</p>`;
+        reviewContent += `<p class="small text-primary review-price"><i class="fas fa-euro-sign me-1"></i> 가격: €${review.price.toFixed(2)}</p>`;
     }
     
     // 이미지가 있으면 추가
@@ -1329,10 +1366,289 @@ function createReviewElement(review) {
         `;
     }
     
+    // 수정/삭제 버튼 추가
+    reviewContent += actionButtons;
+    
     reviewContent += `</div>`;
     reviewDiv.innerHTML = reviewContent;
     
+    // 이벤트 리스너 추가
+    if (isOwner || isAdmin) {
+        // 수정 버튼 이벤트
+        const editBtn = reviewDiv.querySelector('.edit-review-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                showEditReviewModal(review);
+            });
+        }
+        
+        // 삭제 버튼 이벤트
+        const deleteBtn = reviewDiv.querySelector('.delete-review-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                confirmDeleteReview(review._id);
+            });
+        }
+    }
+    
     return reviewDiv;
+}
+
+// 리뷰 수정 모달 표시 함수
+function showEditReviewModal(review) {
+    // 모달에 리뷰 ID 설정
+    document.getElementById('edit-review-id').value = review._id;
+    document.getElementById('edit-restaurant-id').value = currentRestaurantId;
+    
+    // 기존 리뷰 내용 채우기
+    document.getElementById('edit-review-text').value = review.text;
+    document.getElementById('edit-review-menu').value = review.menu || '';
+    document.getElementById('edit-review-price').value = review.price || '';
+    
+    // 별점 설정
+    selectedRating = review.rating;
+    updateEditStars(review.rating);
+    
+    // 모달 표시
+    const reviewModal = new bootstrap.Modal(document.getElementById('edit-review-modal'));
+    reviewModal.show();
+}
+
+// 리뷰 삭제 확인
+function confirmDeleteReview(reviewId) {
+    if (confirm('이 리뷰를 삭제하시겠습니까? 삭제한 리뷰는 복구할 수 없습니다.')) {
+        deleteReview(currentRestaurantId, reviewId);
+    }
+}
+
+// 리뷰 수정 함수
+async function updateReview(restaurantId, reviewId, reviewData) {
+    try {
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('리뷰 수정을 위해 로그인이 필요합니다.');
+            return null;
+        }
+
+        const url = `${API_URL}/reviews/${restaurantId}/${reviewId}`;
+        console.log('API 호출 (PUT):', url, reviewData);
+        
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(reviewData)
+        });
+        
+        const data = await response.json();
+        
+        console.log('API 응답 (update review):', data);
+        
+        if (data.success) {
+            return data.data;
+        } else {
+            alert(`리뷰 수정에 실패했습니다: ${data.error}`);
+            return null;
+        }
+    } catch (error) {
+        console.error('API 요청 중 오류가 발생했습니다:', error);
+        alert('리뷰 수정 중 오류가 발생했습니다.');
+        return null;
+    }
+}
+
+// 리뷰 삭제 함수
+async function deleteReview(restaurantId, reviewId) {
+    try {
+        // 토큰 확인
+        const token = getToken();
+        if (!token) {
+            alert('리뷰 삭제를 위해 로그인이 필요합니다.');
+            return null;
+        }
+
+        const url = `${API_URL}/reviews/${restaurantId}/${reviewId}`;
+        console.log('API 호출 (DELETE):', url);
+        
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        const data = await response.json();
+        
+        console.log('API 응답 (delete review):', data);
+        
+        if (data.success) {
+            // 리뷰 목록 다시 로드
+            const updatedRestaurant = data.data;
+            
+            // 레스토랑 객체 업데이트
+            const index = restaurants.findIndex(r => r._id === currentRestaurantId);
+            if (index !== -1) {
+                restaurants[index] = updatedRestaurant;
+            }
+            
+            // 리뷰 목록 업데이트
+            loadReviews(currentRestaurantId);
+            
+            // 레스토랑 평점 업데이트
+            updateRestaurantRating(updatedRestaurant);
+            
+            alert('리뷰가 삭제되었습니다.');
+            return updatedRestaurant;
+        } else {
+            alert(`리뷰 삭제에 실패했습니다: ${data.error}`);
+            return null;
+        }
+    } catch (error) {
+        console.error('API 요청 중 오류가 발생했습니다:', error);
+        alert('리뷰 삭제 중 오류가 발생했습니다.');
+        return null;
+    }
+}
+
+// 리뷰 수정 폼 제출 이벤트 핸들러
+async function submitEditReview() {
+    // 별점이 선택되지 않은 경우
+    if (selectedRating === 0) {
+        alert("평점을 선택해주세요.");
+        return;
+    }
+    
+    // 리뷰 텍스트가 비어있는 경우
+    const reviewText = document.getElementById("edit-review-text").value.trim();
+    if (!reviewText) {
+        alert("리뷰 내용을 입력해주세요.");
+        return;
+    }
+    
+    const reviewId = document.getElementById("edit-review-id").value;
+    const restaurantId = document.getElementById("edit-restaurant-id").value;
+    
+    // 리뷰 데이터 수집
+    const reviewData = {
+        rating: selectedRating,
+        text: reviewText,
+        menu: document.getElementById("edit-review-menu").value.trim(),
+        price: parseFloat(document.getElementById("edit-review-price").value) || 0
+    };
+    
+    try {
+        // API를 통해 리뷰 수정
+        const result = await updateReview(restaurantId, reviewId, reviewData);
+        
+        if (result) {
+            // 레스토랑 객체 업데이트
+            const index = restaurants.findIndex(r => r._id === currentRestaurantId);
+            if (index !== -1) {
+                restaurants[index] = result;
+            }
+            
+            // 리뷰 목록 업데이트
+            loadReviews(currentRestaurantId);
+            
+            // 레스토랑 평점 업데이트
+            updateRestaurantRating(result);
+            
+            // 모달 닫기
+            bootstrap.Modal.getInstance(document.getElementById('edit-review-modal')).hide();
+            
+            alert('리뷰가 수정되었습니다.');
+        }
+    } catch (error) {
+        console.error("리뷰 수정 중 오류 발생:", error);
+        alert("리뷰를 수정하는 중 오류가 발생했습니다.");
+    }
+}
+
+// 수정 모달의 별점 업데이트
+function updateEditStars(rating) {
+    const stars = document.querySelectorAll('.edit-rating-stars i');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.remove('far');
+            star.classList.add('fas', 'text-warning');
+        } else {
+            star.classList.remove('fas', 'text-warning');
+            star.classList.add('far');
+        }
+    });
+}
+
+// 별점 시스템 설정 함수 확장
+function setupRatingStars() {
+    // 기존 리뷰 작성 모달의 별점
+    const stars = document.querySelectorAll('.rating-stars i');
+    
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            selectedRating = rating;
+            updateStars(rating);
+        });
+        
+        star.addEventListener('mouseover', function() {
+            const rating = parseInt(this.dataset.rating);
+            highlightStars(rating);
+        });
+        
+        star.addEventListener('mouseout', function() {
+            resetStarsWithSelected();
+        });
+    });
+    
+    // 리뷰 수정 모달의 별점
+    const editStars = document.querySelectorAll('.edit-rating-stars i');
+    
+    editStars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            selectedRating = rating;
+            updateEditStars(rating);
+        });
+        
+        star.addEventListener('mouseover', function() {
+            const rating = parseInt(this.dataset.rating);
+            highlightEditStars(rating);
+        });
+        
+        star.addEventListener('mouseout', function() {
+            resetEditStarsWithSelected();
+        });
+    });
+}
+
+// 수정 모달의 별점 하이라이트
+function highlightEditStars(rating) {
+    const stars = document.querySelectorAll('.edit-rating-stars i');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.remove('far');
+            star.classList.add('fas');
+        } else {
+            star.classList.remove('fas');
+            star.classList.add('far');
+        }
+    });
+}
+
+// 수정 모달의 선택된 별점 유지
+function resetEditStarsWithSelected() {
+    if (selectedRating > 0) {
+        updateEditStars(selectedRating);
+    } else {
+        resetEditStars();
+    }
+}
+
+// 수정 모달의 별점 초기화
+function resetEditStars() {
+    const stars = document.querySelectorAll('.edit-rating-stars i');
+    stars.forEach(star => {
+        star.classList.remove('fas', 'text-warning');
+        star.classList.add('far');
+    });
 }
 
 // 맛집 등록 폼 표시 함수

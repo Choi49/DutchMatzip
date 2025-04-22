@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 // 리뷰 스키마 정의
 const ReviewSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    auto: true,
+    required: true
+  },
   rating: {
     type: Number,
     required: true,
