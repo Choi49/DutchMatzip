@@ -324,6 +324,9 @@ function initMap() {
     // 레스토랑 카드 닫기 버튼 이벤트 리스너
     document.getElementById("close-restaurant-card").addEventListener("click", hideRestaurantCard);
     
+    // 바깥 영역 클릭 시 레스토랑 카드 닫기 이벤트 추가
+    setupOutsideClickListeners();
+    
     // 리뷰 작성 버튼 이벤트 리스너
     document.getElementById("write-review-btn").addEventListener("click", showReviewModal);
     
@@ -339,7 +342,151 @@ function initMap() {
     // 사이드바 토글 버튼 이벤트 리스너
     setupSidebar();
     
+    // 캐시 정리
     imageCache.cleanupCache();
+    
+    // 모바일 화면에서만 검색 결과 컨테이너 초기화
+    if (window.innerWidth < 768) {
+        const mobileContainer = document.querySelector('.mobile-results-container');
+        if (mobileContainer) {
+            mobileContainer.classList.add('peek');
+            // 드래그 제스처 설정
+            setupMobileResultsGestures();
+            // 지도 높이 조정 (모바일에서만)
+            document.getElementById('map').style.height = 'calc(100% - 50px)';
+            // 지도 리사이즈
+            setTimeout(resizeMap, 300);
+        }
+    } else {
+        // 데스크톱에서는 지도 높이 100%로 설정
+        const map = document.getElementById('map');
+        if (map) {
+            map.style.height = '100%';
+        }
+    }
+}
+
+// 바깥 클릭 시 닫기 기능 설정
+function setupOutsideClickListeners() {
+    // 맵 클릭 이벤트: 레스토랑 카드 닫기
+    map.addListener('click', function() {
+        hideRestaurantCard();
+        
+        // InfoWindow 닫기
+        if (currentInfoWindow) {
+            currentInfoWindow.close();
+            currentInfoWindow = null;
+        }
+        
+        // 모바일 검색 결과 컨테이너 peek 상태로 변경
+        peekMobileResults();
+    });
+    
+    // 레스토랑 카드 자체 클릭 시 이벤트 버블링 중지
+    const restaurantCard = document.getElementById('restaurant-card');
+    restaurantCard.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // 모바일 검색 결과 컨테이너 클릭 시 이벤트 버블링 중지
+    const mobileResultsContainer = document.querySelector('.mobile-results-container');
+    if (mobileResultsContainer) {
+        mobileResultsContainer.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+    
+    // 문서 전체 클릭 이벤트로 InfoWindow 닫기 및 모바일 검색 결과 peek 상태로 변경
+    document.addEventListener('click', function(e) {
+        // 지도 또는 마커 관련 요소가 아닌지 확인
+        if (!isGoogleMapsElement(e.target)) {
+            // InfoWindow 닫기
+            if (!e.target.closest('.gm-style-iw') && !e.target.closest('.restaurant-info-card') && currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
+            
+            // 모바일 검색 결과 컨테이너 peek 상태로 변경
+            if (!e.target.closest('.mobile-results-container') && !e.target.closest('#sidebar')) {
+                peekMobileResults();
+            }
+        }
+    });
+}
+
+// 모바일 결과 컨테이너 숨기기 함수 (peek 상태로 변경)
+function hideMobileResults() {
+    // 데스크톱에서는 아무 작업도 하지 않음
+    if (window.innerWidth >= 768) return;
+    
+    const mobileContainer = document.querySelector('.mobile-results-container');
+    if (mobileContainer) {
+        // peek과 show 클래스 모두 제거
+        mobileContainer.classList.remove('peek');
+        mobileContainer.classList.remove('show');
+        
+        // 지도 높이 복원
+        const map = document.getElementById('map');
+        if (map) {
+            map.style.height = '100%';
+        }
+        
+        // 지도 리사이즈 이벤트 트리거
+        setTimeout(resizeMap, 300);
+    }
+}
+
+// 모바일 결과 컨테이너를 peek 상태로 변경하는 함수
+function peekMobileResults() {
+    // 데스크톱에서는 아무 작업도 하지 않음
+    if (window.innerWidth >= 768) return;
+    
+    const mobileContainer = document.querySelector('.mobile-results-container');
+    if (mobileContainer) {
+        // show 클래스를 제거하고 peek 클래스 추가
+        mobileContainer.classList.remove('show');
+        mobileContainer.classList.add('peek');
+        
+        // 지도 높이 조정 (모바일에서만)
+        const map = document.getElementById('map');
+        if (map) {
+            map.style.height = 'calc(100% - 50px)';
+        }
+        
+        // 지도 리사이즈 이벤트 트리거
+        setTimeout(resizeMap, 300);
+    }
+}
+
+// Google Maps 요소인지 확인하는 유틸리티 함수
+function isGoogleMapsElement(element) {
+    // 요소나 상위 요소 중에 Google Maps 관련 클래스가 있는지 확인
+    if (!element) return false;
+    
+    // Google Maps API에서 사용하는 일반적인 클래스 패턴
+    const gmClasses = ['gm-', 'gmnoprint', 'gmnoscreen'];
+    
+    // 요소 자체나 부모 요소 중에 Google Maps 클래스가 있는지 확인
+    let currentElement = element;
+    while (currentElement) {
+        // 클래스 이름이 있는지 확인
+        if (currentElement.className && typeof currentElement.className === 'string') {
+            for (const gmClass of gmClasses) {
+                if (currentElement.className.includes(gmClass)) {
+                    return true;
+                }
+            }
+        }
+        
+        // ID로도 확인
+        if (currentElement.id === 'map') {
+            return true;
+        }
+        
+        currentElement = currentElement.parentElement;
+    }
+    
+    return false;
 }
 
 // 서버에서 레스토랑 데이터 로드
@@ -458,28 +605,71 @@ function updateSidebarWithPlacesResults(places) {
     const listContainer = document.querySelector('.restaurant-items');
     const noRestaurantsMsg = document.getElementById('no-restaurants-message');
     
+    // 모바일 결과 컨테이너용 변수
+    const mobileContainer = document.querySelector('.mobile-results-container');
+    const mobileListContainer = document.querySelector('.mobile-restaurant-items');
+    const mobileNoResultsMsg = document.getElementById('mobile-no-results-message');
+    
     // 저장된 맛집 중 표시 가능한 것을 먼저 가져옴
     const visibleRestaurants = markers.filter(m => m.marker.getVisible());
     
     // 기존 식당 목록을 업데이트하여 표시
     updateRestaurantList();
     
-    // 기존 검색 결과 섹션 제거 (구분선, 제목, 결과 항목들)
+    // 데스크탑 뷰: 기존 검색 결과 섹션 제거 (구분선, 제목, 결과 항목들)
     const existingGoogleResults = Array.from(listContainer.querySelectorAll('.google-place-item, .dropdown-divider, h6.text-muted'));
     existingGoogleResults.forEach(item => listContainer.removeChild(item));
+    
+    // 모바일 뷰: 기존 검색 결과 제거
+    Array.from(mobileListContainer.querySelectorAll('.google-place-item, .list-group-item:not(#mobile-no-results-message)')).forEach(item => {
+        mobileListContainer.removeChild(item);
+    });
     
     // 표시할 식당이 없고 검색 결과도 없으면 메시지 표시
     if (visibleRestaurants.length === 0 && (!places || places.length === 0)) {
         noRestaurantsMsg.style.display = 'block';
+        mobileNoResultsMsg.style.display = 'block';
+        
+        // 모바일 결과 컨테이너 숨기기
+        mobileContainer.classList.remove('show');
         return;
     }
     
     // 메시지 숨기기
     noRestaurantsMsg.style.display = 'none';
+    mobileNoResultsMsg.style.display = 'none';
+    
+    // 모바일 뷰에서는 먼저 저장된 맛집을 목록에 추가
+    if (visibleRestaurants.length > 0) {
+        // 저장된 맛집 리스트 표시
+        visibleRestaurants.forEach(markerObj => {
+            const restaurant = markerObj.restaurant;
+            
+            const item = createMobileRestaurantItem(restaurant, false);
+            
+            // 클릭 이벤트 추가
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // 지도 중심 이동
+                map.setCenter({ lat: restaurant.lat, lng: restaurant.lng });
+                map.setZoom(16);
+                
+                // 레스토랑 카드 표시
+                showRestaurantCard(restaurant);
+                
+                // 모바일 결과 컨테이너 접기
+                mobileContainer.classList.remove('show');
+            });
+            
+            // 목록에 추가
+            mobileListContainer.appendChild(item);
+        });
+    }
     
     // 구글 검색 결과 항목 추가
     if (places && places.length > 0) {
-        // 구글 검색 결과 섹션 구분선 추가 (저장된 맛집이 있는 경우에만)
+        // 데스크톱 뷰: 구글 검색 결과 섹션 구분선 추가 (저장된 맛집이 있는 경우에만)
         if (visibleRestaurants.length > 0) {
             const divider = document.createElement('div');
             divider.className = 'dropdown-divider my-3';
@@ -489,13 +679,29 @@ function updateSidebarWithPlacesResults(places) {
             heading.className = 'text-muted px-3 py-1';
             heading.textContent = '구글 검색 결과';
             listContainer.appendChild(heading);
+            
+            // 모바일 뷰에도 구분선 추가
+            const mobileDivider = document.createElement('div');
+            mobileDivider.className = 'dropdown-divider my-3';
+            mobileListContainer.appendChild(mobileDivider);
+            
+            const mobileHeading = document.createElement('h6');
+            mobileHeading.className = 'text-muted px-3 py-1';
+            mobileHeading.textContent = '구글 검색 결과';
+            mobileListContainer.appendChild(mobileHeading);
         }
         
         // 검색 결과 목록 추가
         places.forEach(place => {
+            // 데스크톱 뷰용 항목 생성
             const item = document.createElement('a');
             item.className = 'list-group-item list-group-item-action google-place-item';
             item.href = '#';
+            
+            // 모바일 뷰용 항목 생성
+            const mobileItem = document.createElement('a');
+            mobileItem.className = 'list-group-item list-group-item-action google-place-item';
+            mobileItem.href = '#';
             
             // 해당 장소의 마커 찾기
             const placeMarker = placesMarkers.find(m => m.place && m.place.place_id === place.place_id);
@@ -508,7 +714,7 @@ function updateSidebarWithPlacesResults(places) {
                 else if (place.types.includes('bar')) placeType = '바';
             }
             
-            item.innerHTML = `
+            const itemContent = `
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-0">${place.name}</h6>
@@ -525,7 +731,10 @@ function updateSidebarWithPlacesResults(places) {
                 </div>
             `;
             
-            // 클릭 이벤트 추가
+            item.innerHTML = itemContent;
+            mobileItem.innerHTML = itemContent;
+            
+            // 클릭 이벤트 추가 - 데스크톱
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 
@@ -538,6 +747,14 @@ function updateSidebarWithPlacesResults(places) {
                     // 정보창 생성 및 열기
                     const infoWindow = new google.maps.InfoWindow({
                         content: createPlaceInfoContent(place)
+                    });
+                    
+                    // 정보창이 열릴 때 배경을 불투명하게 설정
+                    google.maps.event.addListener(infoWindow, 'domready', function() {
+                        const iwOuter = document.querySelector('.gm-style-iw-c');
+                        if (iwOuter) {
+                            iwOuter.classList.add('info-window-opaque');
+                        }
                     });
                     
                     infoWindow.open(map, placeMarker);
@@ -554,11 +771,333 @@ function updateSidebarWithPlacesResults(places) {
                 hideRestaurantCard();
             });
             
-            // 목록에 추가
+            // 클릭 이벤트 추가 - 모바일
+            mobileItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // 이전 정보창 닫기
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
+                
+                if (placeMarker) {
+                    // 정보창 생성 및 열기
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: createPlaceInfoContent(place)
+                    });
+                    
+                    // 정보창이 열릴 때 배경을 불투명하게 설정
+                    google.maps.event.addListener(infoWindow, 'domready', function() {
+                        const iwOuter = document.querySelector('.gm-style-iw-c');
+                        if (iwOuter) {
+                            iwOuter.classList.add('info-window-opaque');
+                        }
+                    });
+                    
+                    infoWindow.open(map, placeMarker);
+                    currentInfoWindow = infoWindow;
+                }
+                
+                // 위치로 지도 이동
+                if (place.geometry && place.geometry.location) {
+                    map.setCenter(place.geometry.location);
+                    map.setZoom(16);
+                }
+                
+                // 저장된 레스토랑 카드 닫기
+                hideRestaurantCard();
+                
+                // 모바일 결과 컨테이너 유지 (접기 코드 제거)
+                // mobileContainer.classList.remove('show');
+            });
+            
+            // 데스크톱 목록에 추가
             listContainer.appendChild(item);
+            
+            // 모바일 목록에 추가
+            mobileListContainer.appendChild(mobileItem);
         });
     }
+    
+    // 검색 결과가 있을 때만 모바일 결과 컨테이너 표시
+    if ((visibleRestaurants.length > 0 || (places && places.length > 0)) && window.innerWidth < 768) {
+        // 모바일 결과 컨테이너 표시
+        showMobileResults();
+    }
 }
+
+// 모바일용 레스토랑 항목 생성 함수
+function createMobileRestaurantItem(restaurant, isGooglePlace = false) {
+    const item = document.createElement('a');
+    item.href = '#';
+    item.className = 'list-group-item list-group-item-action d-flex align-items-center';
+    if (isGooglePlace) {
+        item.classList.add('google-place-item');
+    } else {
+        item.dataset.id = restaurant._id || restaurant.id; // MongoDB ID 사용
+    }
+    
+    const categoryStyle = getCategoryStyle(restaurant.category);
+    const cityName = restaurant.city ? getCityNameInKorean(restaurant.city) : '기타';
+    
+    item.innerHTML = `
+        <div class="me-2">
+            <i class="fas fa-circle" style="color: ${categoryStyle.color}; font-size: 0.7rem;"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="fw-bold">${restaurant.name}</div>
+            <div class="small text-muted">${cityName}</div>
+        </div>
+        <div class="text-warning small">
+            <i class="fas fa-star"></i> ${restaurant.rating.toFixed(1)}
+        </div>
+    `;
+    
+    return item;
+}
+
+// 모바일 결과 컨테이너 표시 함수
+function showMobileResults() {
+    // 데스크톱에서는 아무 작업도 하지 않음
+    if (window.innerWidth >= 768) return;
+    
+    const mobileContainer = document.querySelector('.mobile-results-container');
+    const mobileRestaurantItems = document.querySelector('.mobile-restaurant-items');
+    const mobileTitle = document.querySelector('.mobile-results-title');
+    
+    // 모바일 컨테이너 표시 (peek 상태에서 시작)
+    mobileContainer.classList.remove('peek');
+    mobileContainer.classList.add('show');
+    
+    // 결과 수 계산
+    const visibleRestaurants = markers.filter(m => m.marker.getVisible()).length;
+    const googlePlaces = placesMarkers.length;
+    const totalResults = visibleRestaurants + googlePlaces;
+    
+    // 결과 수 표시
+    if (totalResults > 0) {
+        mobileTitle.textContent = `검색 결과 (${totalResults}개)`;
+    } else {
+        mobileTitle.textContent = '검색 결과';
+    }
+    
+    // 제스처 이벤트 처리 설정
+    setupMobileResultsGestures();
+    
+    // 지도 높이 조정
+    const map = document.getElementById('map');
+    const containerHeight = mobileContainer.getBoundingClientRect().height;
+    map.style.height = `calc(100% - ${containerHeight}px)`;
+    
+    // 지도 리사이즈 이벤트 트리거
+    setTimeout(resizeMap, 300);
+}
+
+// 모바일 결과 컨테이너 제스처 설정
+function setupMobileResultsGestures() {
+    const mobileContainer = document.querySelector('.mobile-results-container');
+    const handle = mobileContainer.querySelector('.handle');
+    const headerElement = mobileContainer.querySelector('.mobile-results-header');
+    const map = document.getElementById('map');
+    
+    let startY = 0;
+    let startHeight = 0;
+    let isPeeking = mobileContainer.classList.contains('peek');
+    
+    // 지도 크기 조정 함수
+    function adjustMapHeight() {
+        // 모바일 화면에서만 조정
+        if (window.innerWidth >= 768) {
+            map.style.height = '100%'; // 데스크톱에서는 항상 100%
+            return;
+        }
+        
+        // 모바일에서 결과 컨테이너가 show 상태인 경우
+        if (mobileContainer.classList.contains('show')) {
+            const containerHeight = mobileContainer.getBoundingClientRect().height;
+            map.style.height = `calc(100% - ${containerHeight}px)`;
+        } 
+        // peek 상태인 경우
+        else if (mobileContainer.classList.contains('peek')) {
+            map.style.height = 'calc(100% - 50px)';
+        }
+        // 숨겨진 경우
+        else {
+            map.style.height = '100%';
+        }
+        
+        // 지도 리사이즈 이벤트 트리거
+        if (window.google && window.google.maps) {
+            google.maps.event.trigger(window.map, 'resize');
+        }
+    }
+    
+    // 핸들 및 헤더 터치 이벤트 추가
+    handle.addEventListener('touchstart', handleTouchStart);
+    headerElement.addEventListener('touchstart', handleTouchStart);
+    
+    // 터치 시작 함수
+    function handleTouchStart(e) {
+        startY = e.touches[0].clientY;
+        startHeight = mobileContainer.getBoundingClientRect().height;
+        
+        // 트랜지션 효과 제거 (드래그 중에는 부드럽게 움직이도록)
+        mobileContainer.style.transition = 'none';
+    }
+    
+    // 화면에 터치 이동 이벤트 추가
+    document.addEventListener('touchmove', function(e) {
+        if (startY > 0) {
+            const currentY = e.touches[0].clientY;
+            const diff = currentY - startY;
+            
+            // 변경된 높이에 따른 변환 계산
+            const windowHeight = window.innerHeight;
+            const containerHeight = mobileContainer.getBoundingClientRect().height;
+            
+            // 위로 스와이프 (컨테이너 열기)
+            if (diff < 0) {
+                if (isPeeking) {
+                    // peek 상태에서 완전히 열기
+                    const percentOpen = Math.min(1, Math.abs(diff) / (containerHeight * 2));
+                    const translateY = 100 - (percentOpen * 100);
+                    
+                    if (translateY < 30) { // 충분히 위로 스와이프 했으면 완전히 열기
+                        mobileContainer.classList.remove('peek');
+                        mobileContainer.classList.add('show');
+                        mobileContainer.style.transform = '';
+                        isPeeking = false;
+                        
+                        // 헤더 스타일 조정
+                        const contentElement = mobileContainer.querySelector('.mobile-results-content');
+                        if (contentElement) {
+                            contentElement.style.display = 'block';
+                        }
+                    } else {
+                        mobileContainer.style.transform = `translateY(calc(100% - 50px - ${Math.abs(diff)}px))`;
+                    }
+                }
+            } 
+            // 아래로 스와이프 (컨테이너 닫기 또는 peek 상태로)
+            else if (diff > 0) {
+                if (!isPeeking) {
+                    // 완전히 열린 상태에서 peek 상태로 전환
+                    const percentClosed = Math.min(1, diff / (containerHeight * 0.7));
+                    const translateY = percentClosed * 100;
+                    
+                    if (translateY > 70) { // 충분히 아래로 스와이프 했으면 peek 상태로
+                        mobileContainer.classList.remove('show');
+                        mobileContainer.classList.add('peek');
+                        mobileContainer.style.transform = '';
+                        isPeeking = true;
+                    } else {
+                        mobileContainer.style.transform = `translateY(${translateY}%)`;
+                    }
+                }
+            }
+            
+            // 지도 높이 실시간 조정
+            adjustMapHeight();
+        }
+    });
+    
+    // 터치 종료 이벤트 추가
+    document.addEventListener('touchend', function(e) {
+        if (startY > 0) {
+            startY = 0;
+            
+            // 트랜지션 효과 복원
+            mobileContainer.style.transition = 'transform 0.3s ease';
+            
+            // 현재 변환값 가져오기
+            const transformValue = mobileContainer.style.transform;
+            const translateValue = transformValue ? 
+                parseFloat(transformValue.replace(/[^\d.-]/g, '')) : 0;
+            
+            // 상태에 따라 적절히 처리
+            if (isPeeking) {
+                // peek 상태인 경우: 위로 충분히 스와이프 했으면 show로 전환
+                if (transformValue && translateValue < 40) {
+                    mobileContainer.classList.remove('peek');
+                    mobileContainer.classList.add('show');
+                    isPeeking = false;
+                } else {
+                    mobileContainer.style.transform = '';
+                }
+            } else {
+                // show 상태인 경우: 아래로 충분히 스와이프 했으면 peek로 전환
+                if (transformValue && translateValue > 50) {
+                    peekMobileResults();
+                    isPeeking = true;
+                } else {
+                    mobileContainer.style.transform = '';
+                }
+            }
+            
+            // 지도 높이 조정
+            adjustMapHeight();
+        }
+    });
+    
+    // peek 상태에서 헤더 클릭 시 열기
+    headerElement.addEventListener('click', function() {
+        if (mobileContainer.classList.contains('peek')) {
+            mobileContainer.classList.remove('peek');
+            mobileContainer.classList.add('show');
+            // 콘텐츠 표시
+            const contentElement = mobileContainer.querySelector('.mobile-results-content');
+            if (contentElement) {
+                contentElement.style.display = 'block';
+            }
+            
+            // 지도 높이 조정
+            adjustMapHeight();
+        }
+    });
+    
+    // 초기 지도 높이 조정
+    adjustMapHeight();
+}
+
+// 페이지 로드 시 모바일 결과 컨테이너 제스처 설정
+document.addEventListener('DOMContentLoaded', function() {
+    // ... 기존 코드 유지 ...
+    
+    // 모바일 결과 컨테이너 설정
+    setupMobileResultsGestures();
+    
+    // 윈도우 리사이즈 이벤트 추가
+    window.addEventListener('resize', function() {
+        // 화면 크기에 따라 지도 높이 조정
+        const map = document.getElementById('map');
+        const mobileContainer = document.querySelector('.mobile-results-container');
+        
+        if (window.innerWidth >= 768) {
+            // 데스크톱에서는 항상 100%
+            map.style.height = '100%';
+            
+            // 검색 결과가 없는 경우 peek 상태 제거 (데스크톱에서는 불필요)
+            if (mobileContainer && mobileContainer.classList.contains('peek')) {
+                mobileContainer.classList.remove('peek');
+            }
+        } else {
+            // 모바일에서는 상태에 따라 조정
+            if (mobileContainer) {
+                if (mobileContainer.classList.contains('show')) {
+                    const containerHeight = mobileContainer.getBoundingClientRect().height;
+                    map.style.height = `calc(100% - ${containerHeight}px)`;
+                } else if (mobileContainer.classList.contains('peek')) {
+                    map.style.height = 'calc(100% - 50px)';
+                } else {
+                    map.style.height = '100%';
+                }
+            }
+        }
+        
+        // 지도 리사이즈
+        resizeMap();
+    });
+});
 
 // Places 마커 제거 함수
 function clearPlacesMarkers() {
@@ -1779,21 +2318,36 @@ function resizeMap() {
 
 // 레스토랑 리스트 업데이트
 function updateRestaurantList() {
+    // 데스크톱 요소
     const container = document.querySelector('.restaurant-items');
     const noRestaurantsMsg = document.getElementById('no-restaurants-message');
+    
+    // 모바일 요소
+    const mobileContainer = document.querySelector('.mobile-restaurant-items');
+    const mobileNoResultsMsg = document.getElementById('mobile-no-results-message');
+    const mobileResultsContainer = document.querySelector('.mobile-results-container');
     
     // 모든 식당 목록 항목 완전히 제거 (노드 리스트를 배열로 변환하여 반복)
     const existingItems = Array.from(container.children).filter(child => child !== noRestaurantsMsg);
     existingItems.forEach(item => container.removeChild(item));
     
+    // 모바일 목록도 초기화
+    const existingMobileItems = Array.from(mobileContainer.children).filter(child => child !== mobileNoResultsMsg);
+    existingMobileItems.forEach(item => mobileContainer.removeChild(item));
+    
     // 레스토랑이 없는 경우 메시지 표시
     if (restaurants.length === 0) {
         noRestaurantsMsg.style.display = 'block';
+        mobileNoResultsMsg.style.display = 'block';
+        
+        // 모바일 결과 컨테이너 숨기기
+        mobileResultsContainer.classList.remove('show');
         return;
     }
     
     // 메시지 숨기기
     noRestaurantsMsg.style.display = 'none';
+    mobileNoResultsMsg.style.display = 'none';
     
     // 중복 제거를 위한 Set 생성
     const addedRestaurants = new Set();
@@ -1811,6 +2365,7 @@ function updateRestaurantList() {
         // 중복이 아닌 경우 Set에 추가
         addedRestaurants.add(restaurantKey);
         
+        // 데스크톱 아이템 생성
         const item = document.createElement('a');
         item.href = '#';
         item.className = 'list-group-item list-group-item-action d-flex align-items-center';
@@ -1832,6 +2387,7 @@ function updateRestaurantList() {
             </div>
         `;
         
+        // 데스크톱 클릭 이벤트
         item.addEventListener('click', (e) => {
             e.preventDefault();
             
@@ -1847,10 +2403,41 @@ function updateRestaurantList() {
             }
         });
         
+        // 데스크톱 목록에 추가
         container.appendChild(item);
+        
+        // 모바일 항목 생성 및 추가
+        const mobileItem = createMobileRestaurantItem(restaurant);
+        
+        // 모바일 클릭 이벤트
+        mobileItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // 해당 레스토랑 찾기
+            const restaurant = restaurants.find(r => r._id === mobileItem.dataset.id);
+            if (restaurant) {
+                // 지도 중심 이동
+                map.setCenter({ lat: restaurant.lat, lng: restaurant.lng });
+                map.setZoom(16);
+                
+                // 레스토랑 카드 표시
+                showRestaurantCard(restaurant);
+                
+                // 모바일 결과 컨테이너는 계속 표시된 상태로 유지
+                // mobileResultsContainer.classList.remove('show'); <- 이 부분 제거
+            }
+        });
+        
+        // 모바일 목록에 추가
+        mobileContainer.appendChild(mobileItem);
     });
     
     console.log(`처리된 레스토랑 수: ${addedRestaurants.size}/${restaurants.length}`);
+    
+    // 모바일에서 결과가 있는 경우 결과 컨테이너 표시
+    if (addedRestaurants.size > 0 && window.innerWidth < 768) {
+        showMobileResults();
+    }
 }
 
 // 카테고리에 따른 부트스트랩 스타일 반환 함수
@@ -2316,6 +2903,14 @@ function showPlacesResults(places, hideRestaurantMarkers = true) {
                 infoWindow.open(map, marker);
                 currentInfoWindow = infoWindow;
                 
+                // 정보창이 열릴 때 배경을 불투명하게 설정
+                google.maps.event.addListener(infoWindow, 'domready', function() {
+                    const iwOuter = document.querySelector('.gm-style-iw-c');
+                    if (iwOuter) {
+                        iwOuter.classList.add('info-window-opaque');
+                    }
+                });
+                
                 // 저장된 레스토랑 카드 닫기
                 hideRestaurantCard();
             });
@@ -2527,6 +3122,11 @@ async function performSearch(query) {
             fitMapToMarkers();
             
             console.log(`서버에서 ${searchResults.length}개의 맛집을 찾았습니다.`);
+            
+            // 모바일에서 검색 결과 컨테이너 표시
+            if (window.innerWidth < 768) {
+                showMobileResults();
+            }
         } else {
             // 검색 결과가 없으면 모든 마커 숨기기
             markers.forEach(m => m.marker.setVisible(false));

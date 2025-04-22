@@ -192,6 +192,22 @@
                     </div>
                 </div>
                 
+                <!-- 모바일 검색 결과 컨테이너 (모바일에서만 표시) -->
+                <div class="mobile-results-container d-md-none">
+                    <div class="mobile-results-header">
+                        <span class="handle"></span>
+                        <h5 class="mobile-results-title">검색 결과</h5>
+                    </div>
+                    <div class="mobile-results-content">
+                        <div class="list-group mobile-restaurant-items">
+                            <div class="text-center p-3 text-muted small" id="mobile-no-results-message">
+                                검색 결과가 없습니다
+                            </div>
+                            <!-- 모바일 검색 결과가 여기에 동적으로 추가됩니다 -->
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 리뷰 작성 모달 -->
                 <div class="modal fade" id="review-modal" tabindex="-1" aria-labelledby="review-modal-label" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
